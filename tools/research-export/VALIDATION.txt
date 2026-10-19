@@ -1,0 +1,25 @@
+VALIDATION RECORD
+
+Tool: Export-SOC-Research.ps1
+Runtime used for tests: PowerShell 7.4.6 on Linux.
+PowerShell runtime archive checked against its official release SHA256.
+
+Passed:
+- PowerShell parser and embedded POSIX sh syntax.
+- End-to-end export using a fake Docker CLI.
+- Automatic role detection and explicit comma-separated container selection.
+- Filtered Docker metadata; environment names retained without values.
+- Twenty synthetic sensitive values absent from the generated archive.
+- XML, JSON, multiline settings, private-key blocks and command credential redaction fixtures.
+- AI source/model metadata inclusion; venv/dataset/log/weights exclusions.
+- Stopped containers left stopped; failed commands retain exit code and stderr.
+- Source-size and symlink exclusions recorded.
+- Valid JSON metadata, ZIP structure and SHA256 of exported files.
+- Repeat execution creates separate output and preserves source files.
+
+Not performed:
+- Windows PowerShell 5.1 execution.
+- Collection from an actual SOC Docker lab.
+- Validation of detector behavior, model quality or Wazuh delivery.
+
+Redaction is best-effort. Review the export before sharing.
