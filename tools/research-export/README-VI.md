@@ -71,8 +71,8 @@ Lọc thông tin nhạy cảm là **best-effort**, không bảo đảm nhận ra
 | Ubuntu | OS/packages, tiến trình không kèm arguments, interface/routes/listening ports; SSH, sudo, rsyslog/journald, audit và startup files theo danh sách |
 | Suricata | Build info, command line của Suricata, YAML, custom rules và inventory rules; file lớn chỉ ghi metadata/hash |
 | Wazuh | `ossec.conf`, local rules/decoders, shared agent config, internal options; một số cấu hình Filebeat/indexer/dashboard; service/agent status nếu có công cụ |
-| AI | Code và text config trong `AIPath`; bỏ qua venv, dữ liệu, live outputs, runs và checkpoints |
-| Model | Một số JSON metadata và requirements trong `ModelPath`; không lấy weights/checkpoint |
+| AI | Code và text config trong `AIPath`; bỏ qua venv, `data`, `dataset`, `output*`, logs, live outputs, runs và checkpoints |
+| Model | Một số JSON metadata và requirements trong `ModelPath`, gồm `metadata_v4.json` hoặc các bản tương tự; không lấy weights/checkpoint |
 | Bằng chứng thu thập | Command, exit code, stdout/stderr; danh sách file nguồn; ghi chú thiếu/lỗi; SHA256 của các file đã lọc |
 
 Không chạy `docker compose config` vì lệnh đó có thể đưa giá trị secret từ môi trường vào output. Không ghi raw `docker inspect` hoặc toàn bộ environment. Không đọc nội dung auth/HTTP/EVE/alerts logs.
@@ -80,6 +80,8 @@ Không chạy `docker compose config` vì lệnh đó có thể đưa giá trị
 File config trong container giới hạn 512 KiB/file, tổng 120 file / 8 MiB mỗi container. File trên host giới hạn 1 MiB/file, tổng 300 file / 20 MiB. File vượt giới hạn, symlink/junction và lỗi đọc được ghi rõ. Đọc các ghi chú trước khi kết luận thành phần nào vắng mặt.
 
 Bản đã lọc dùng để phân tích, không phải backup để restore hoặc mã nguồn đem chạy lại. Thu được cấu hình không chứng minh hệ thống đang hoạt động đầu cuối.
+
+Bộ lọc đã được bổ sung sau khi xem gói Lab B: các thư mục `data` và `output*`, cùng tên file kết quả phổ biến như `anomaly_scores*.json`/`attack_chains.json`, được bỏ qua. Bản đầu có thể đã lấy các JSON này khi quét cả thư mục project. Vẫn cần kiểm tra gói trước khi chia sẻ.
 
 ## 6. Nếu có lỗi
 

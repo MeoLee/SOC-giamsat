@@ -14,6 +14,8 @@ Passed:
 - AI source/model metadata inclusion; venv/dataset/log/weights exclusions.
 - Stopped containers left stopped; failed commands retain exit code and stderr.
 - Source-size and symlink exclusions recorded.
+- Regression: data/output/output_backup directories and root anomaly-score files excluded.
+- Versioned metadata_v4.json included when ModelPath is supplied.
 - Valid JSON metadata, ZIP structure and SHA256 of exported files.
 - Repeat execution creates separate output and preserves source files.
 

@@ -204,7 +204,7 @@ function Export-TextTree([string]$Root, [string]$Kind) {
     catch { $script:Notes.Add("$Kind directory unavailable: $Root"); return }
     $queue = New-Object 'System.Collections.Generic.Queue[string]'
     $queue.Enqueue($base)
-    $excluded = '^(?:\..*|venv.*|env|__pycache__|node_modules|datasets?|raw|logs?|live|runs?|checkpoints?|models?|prepared.*|dist|build|vendor|cache|backups?|SOC-Research-.*|secrets?|certs?|certificates?)$'
+    $excluded = '^(?:\..*|venv.*|env|__pycache__|node_modules|data|datasets?|output.*|raw|logs?|live|runs?|checkpoints?|models?|prepared.*|dist|build|vendor|cache|backups?|SOC-Research-.*|secrets?|certs?|certificates?)$'
     $visited = 0
     while ($queue.Count -gt 0) {
         if ($visited -ge 1500) { $script:Notes.Add("Directory limit reached for $Kind"); break }
@@ -220,9 +220,10 @@ function Export-TextTree([string]$Root, [string]$Kind) {
                 continue
             }
             if ($item.Name -match $script:SecretFile) { continue }
+            if ($item.Name -match '^(?:anomaly_scores.*|attack_chains|attack_clusters|risk_scores|ai_scores|ai_chains|alerts_after.*|suricata_eve|wazuh_alerts|eve)\.json$') { continue }
             $accept = $false
             if ($Kind -eq 'model-metadata') {
-                $accept = $item.Name -match '^(?:model|features|preprocessor|metrics|golden|golden-predictions|status|config)\.json$|^requirements.*\.txt$'
+                $accept = $item.Name -match '^(?:model|features|preprocessor|metrics|golden|golden-predictions|status|config|metadata(?:[_-]v?\d+)?)\.json$|^requirements.*\.txt$'
             } else {
                 $accept = $item.Extension -match '^\.(?:py|ps1|cmd|bat|sh|json|toml|ya?ml|conf|ini|cfg|rules|xml|lock|js|jsx|ts|tsx|css|html|md)$' -or
                     $item.Name -match '^Dockerfile(?:\..*)?$|^requirements.*\.txt$|^\.dockerignore$'
