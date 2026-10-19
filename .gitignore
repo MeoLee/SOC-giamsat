@@ -13,3 +13,8 @@ lab-a/*.sqlite*
 lab-a/*.pt
 lab-a/*.npz
 lab-a/doctor-result.json
+lab-a/reviewed/
+lab-a/evidence/
+lab-a/benchmarks/
+lab-a/scenario-replay*/
+lab-a/.cache*/

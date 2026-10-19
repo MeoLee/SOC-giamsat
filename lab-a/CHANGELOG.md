@@ -1,3 +1,17 @@
+# 0.4.0-research — 2026-10-19
+
+- Add independently evidenced local-session preparation and scoped SSH labeling
+  for fresh training without the historical CICIDS cache.
+- Validate prepared arrays and full bundle contracts; retain legacy checkpoint
+  policy on resume and version validation-only quality selection on new runs.
+- Compare saved baseline/candidate bundles on the same held-out sessions with
+  coverage, uncertainty, source isolation and explicit evidence limitations.
+- Add bounded local shadow context for distinct ports and optional Apache request
+  rates, with raw-reference error journals and degraded processing states.
+- Add installation, training, research and real-lab scenario guides, a deterministic
+  offline replay suite, and a tested CPU environment setup script.
+- No real-user weights retraining, model promotion or live lab deployment.
+
 # 0.3.0-candidate.1 — 2026-10-19
 
 - Consolidate the uploaded active Lab A source with Quality and Web utilities.

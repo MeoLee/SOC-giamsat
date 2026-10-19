@@ -1,0 +1,64 @@
+{
+  "schema_version": "soc-lab-benchmark/1.0",
+  "synthetic": false,
+  "purpose": "TEMPLATE ONLY. Replace paths, SHA-256, physical session IDs, times and evidence with completed real captures. This file is not benchmark evidence; independent remains false until reviewed.",
+  "sessions": [
+    {
+      "id": "validation-normal-ssh-01",
+      "role": "validation",
+      "scenario": "normal-ssh",
+      "flows": "captures/validation-normal-ssh-01/flows.jsonl",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expected_attack": false,
+      "expected_class": "BENIGN",
+      "evidence": {
+        "independent": false,
+        "source": "REPLACE: controlled SSH operation diary, Accepted auth entries and packet/time mapping",
+        "collected_at": "2026-10-19T09:00:00+07:00"
+      },
+      "provenance": {
+        "capture_session_id": "REPLACE-validation-ssh-physical-session-id",
+        "host_id": "ubuntu-endpoint",
+        "evidence_refs": ["captures/validation-normal-ssh-01/auth.log"]
+      }
+    },
+    {
+      "id": "test-normal-http-01",
+      "role": "test",
+      "scenario": "normal-http",
+      "flows": "captures/test-normal-http-01/flows.jsonl",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expected_attack": false,
+      "expected_class": "BENIGN",
+      "evidence": {
+        "independent": false,
+        "source": "REPLACE: controlled normal HTTP request diary plus independent Apache access log",
+        "collected_at": "2026-10-19T10:00:00+07:00"
+      },
+      "provenance": {
+        "capture_session_id": "REPLACE-test-http-physical-session-id",
+        "host_id": "ubuntu-endpoint",
+        "evidence_refs": ["captures/test-normal-http-01/access.log"]
+      }
+    },
+    {
+      "id": "test-ssh-failure-burst-01",
+      "role": "test",
+      "scenario": "controlled-ssh-bruteforce",
+      "flows": "captures/test-ssh-failure-burst-01/flows.jsonl",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expected_attack": true,
+      "expected_class": "SSH-Patator",
+      "evidence": {
+        "independent": false,
+        "source": "REPLACE: authorized isolated-lab scenario diary, failed-auth evidence and exact affected connection mapping; never derive truth from AI/rule alerts",
+        "collected_at": "2026-10-19T11:00:00+07:00"
+      },
+      "provenance": {
+        "capture_session_id": "REPLACE-test-ssh-attack-physical-session-id",
+        "host_id": "ubuntu-endpoint",
+        "evidence_refs": ["captures/test-ssh-failure-burst-01/auth.log"]
+      }
+    }
+  ]
+}

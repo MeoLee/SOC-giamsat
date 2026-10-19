@@ -332,5 +332,7 @@
     "test_integration_contracts.py": "11 regression/integration cases motivated by Lab B review",
     "docs/": "Integration decisions, Windows steps, validation scope and original patch guides"
   },
-  "text_normalization": "Python LF and EOF whitespace normalized; fileio/model AST matches uploaded base. CMD retains CRLF. See .gitattributes."
+  "text_normalization": "Python LF and EOF whitespace normalized; fileio/model AST matches uploaded base. CMD retains CRLF. See .gitattributes.",
+  "historical_snapshot": true,
+  "current_release_manifest": "VALIDATION-04.json"
 }

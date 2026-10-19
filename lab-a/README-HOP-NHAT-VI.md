@@ -1,5 +1,7 @@
 # Lab A — bản hợp nhất 0.3.0-candidate.1
 
+Tài liệu lịch sử của bản 0.3. Nếu đang dùng source mới, bắt đầu tại [Lab A 0.4](README-START-VI.md).
+
 Đây là **bản mã nguồn ứng viên**, dựng từ `SOC-AI-v0.2.rar` và phần cập nhật còn thiếu trong `utilities.rar` ngày 19/10/2026. Bản này giữ nền Lab A, bổ sung Quality/Web và cải thiện việc kiểm tra nguồn, chuẩn hóa bằng chứng, truy vết log. Không chứa model đã train, dataset, checkpoint hoặc dữ liệu riêng của Lab B.
 
 Đọc [báo cáo đối chiếu A/B và lộ trình](docs/PHAN-TICH-A-B-VI.md) để hiểu các quyết định. [Manifest](docs/MERGE-MANIFEST.json) ghi SHA256 đầu vào và nguồn từng phần được hợp nhất. Các README cũ mô tả từng chức năng lịch sử; hướng dẫn dưới đây là điểm bắt đầu cho gói này.

@@ -1,0 +1,50 @@
+{
+  "version": "0.4.0-research",
+  "release_date": "2026-10-19",
+  "timezone": "Asia/Bangkok",
+  "base_commit": "4a1278ee50a1e4efbfc90eda4d6c2a26cded6f97",
+  "source_uploads_manifest": "MERGE-MANIFEST.json",
+  "tests": {
+    "discovered": 317,
+    "passed": 315,
+    "skipped": 2,
+    "failed": 0,
+    "errors": 0,
+    "runner": "python run_checks.py",
+    "log_sha256": "c0f28fefe31166d4ce978aec934142a15d0cbdb9fd90b0bf0b89b72a0ed2cb0c"
+  },
+  "replay": {
+    "passed": 38,
+    "failed": 0,
+    "synthetic": true,
+    "accuracy_evidence": false
+  },
+  "installation": {
+    "fresh_cpu_venv_installed": true,
+    "setup_script": "Setup-AI.ps1",
+    "host": "Linux with PowerShell7.4.6",
+    "windows_validated": false,
+    "cuda_validated": false
+  },
+  "real_lab": {
+    "weights_supplied": false,
+    "actual_retraining": false,
+    "accuracy_improvement_verified": false,
+    "wazuh_indexer_end_to_end_verified": false
+  },
+  "code_paths": [
+    "prepare_session_data.py",
+    "label_controlled_ssh.py",
+    "soc_ai/data_contract.py",
+    "soc_ai/train.py",
+    "soc_ai/predict.py",
+    "soc_ai/flow.py",
+    "soc_ai/model.py",
+    "evaluate_lab.py",
+    "lab_context.py",
+    "context_runtime.py",
+    "lab_live.py",
+    "lab_scenarios.py",
+    "data_markers.py"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": "soc-supervised-sessions/1.0",
+  "synthetic": false,
+  "notice": "Template only: copy one entry for every independent normal/attack train, validation and development-test session; replace all paths/hashes with real artifacts.",
+  "sessions": [
+    {
+      "id": "train-ssh-normal-01",
+      "capture_session_id": "ACTUAL_CLOSED_CAPTURE_ID",
+      "role": "train",
+      "records": "train-ssh-normal-01/labels.jsonl",
+      "sha256": "REPLACE_WITH_SHA256_OF_REVIEWED_LABELS",
+      "captured_at": "2026-10-19T15:00:00+07:00",
+      "label_review": {"reviewed": true, "independent": true, "method": "Controlled run and matching client/server evidence; human review required"},
+      "evidence_files": [
+        {"id": "raw-eve", "kind": "raw_eve", "path": "train-ssh-normal-01/eve.jsonl", "sha256": "REPLACE_WITH_REAL_SHA256"},
+        {"id": "operator", "kind": "operator", "path": "train-ssh-normal-01/operator.json", "sha256": "REPLACE_WITH_REAL_SHA256"},
+        {"id": "auth", "kind": "auth", "path": "train-ssh-normal-01/auth.log", "sha256": "REPLACE_WITH_REAL_SHA256"}
+      ]
+    }
+  ]
+}

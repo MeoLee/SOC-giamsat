@@ -1,0 +1,23 @@
+{
+  "schema_version": "soc-lab-independent-evidence/1.0",
+  "independent": true,
+  "synthetic": false,
+  "capture_session_id": "REPLACE_WITH_CLOSED_SESSION_ID",
+  "scenario": "normal-ssh",
+  "expected_attack": false,
+  "source": "REPLACE_WITH_OPERATOR_AND_INDEPENDENT_SERVER_OR_PACKET_EVIDENCE_DESCRIPTION",
+  "collected_at": "2026-10-19T07:00:00+07:00",
+  "notes": "Template only. Fill real timestamps, endpoints, logs and observations. Detector output alone is not independent evidence.",
+  "flow_scope": {
+    "all_selected_flows_share_outcome": false,
+    "start_time": "2026-10-19T07:00:00+07:00",
+    "end_time": "2026-10-19T07:03:00+07:00",
+    "src_ip": "192.0.2.10",
+    "dest_ip": "192.0.2.20",
+    "dest_ports": [22]
+  },
+  "artifacts": [
+    {"kind":"operator_log","path":"operator-log.txt"},
+    {"kind":"auth_server_log","path":"endpoint-auth-excerpt.log"}
+  ]
+}

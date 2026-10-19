@@ -1,0 +1,23 @@
+{
+  "schema_version": "soc-controlled-ssh/1.0",
+  "synthetic": true,
+  "id": "train-normal-ssh-example-01",
+  "role": "train",
+  "capture_session_id": "REPLACE_WITH_CLOSED_CAPTURE_SESSION_ID",
+  "source_ip": "192.0.2.10",
+  "target_ip": "192.0.2.20",
+  "target_host": "REPLACE_WITH_HOSTNAME_FROM_AUTH_LOG",
+  "username": "REPLACE_WITH_CONTROLLED_LAB_ACCOUNT",
+  "start_time": "2026-10-19T14:00:00+07:00",
+  "end_time": "2026-10-19T14:02:00+07:00",
+  "captured_at": "2026-10-19T14:05:00+07:00",
+  "intent": "normal_ssh",
+  "controlled": false,
+  "independent": false,
+  "reviewed": false,
+  "reviewer": "REPLACE_WITH_REVIEWER_NAME",
+  "tool_output": {
+    "path": "operator-log.txt",
+    "sha256": "REPLACE_WITH_SHA256_OF_FINAL_OPERATOR_LOG"
+  }
+}

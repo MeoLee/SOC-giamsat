@@ -1,4 +1,13 @@
-# SOC AI v0.2 — checkpoint, workflow dashboard and numbered reports
+# Lab A 0.4 research
+
+Start with [the Vietnamese release guide](README-START-VI.md),
+[installation and training](docs/INSTALL-TRAIN-VI.md), and
+[test scenarios](docs/SCENARIOS-VI.md). This package contains source and verified
+software workflows; it does not contain a newly validated real-world model.
+
+The original v0.2 core documentation is retained below for historical context.
+
+## SOC AI v0.2 — checkpoint, workflow dashboard and numbered reports
 
 Windows / VS Code / Python 3.12 / PyTorch 2.11.0 CUDA. The feature/model contract
 is unchanged from v0.1: six-class experimental completed-flow baseline, 24 features,

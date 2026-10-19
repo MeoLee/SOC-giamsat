@@ -47,5 +47,15 @@
     "recon_window_seconds": 600,
     "max_events": 50000
   },
-  "wazuh_manager": "single-node-wazuh.manager-1"
+  "wazuh_manager": "single-node-wazuh.manager-1",
+  "context": {
+    "enabled": true,
+    "port_enabled": true,
+    "port_window_seconds": 60,
+    "port_threshold": 20,
+    "http_enabled": false,
+    "http_window_seconds": 60,
+    "http_threshold": 120,
+    "allowed_lateness_seconds": 10
+  }
 }

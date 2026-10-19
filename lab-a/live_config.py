@@ -27,7 +27,7 @@ def output_name(value):
     if device in {'con', 'prn', 'aux', 'nul', *(f'com{i}' for i in range(1, 10)),
                   *(f'lpt{i}' for i in range(1, 10))}:
         raise ValueError('Reserved Windows device filename')
-    if key.startswith(('ai-', 'correlation-', '.')) or key in (
+    if key.startswith(('ai-', 'correlation-', 'context-', '.')) or key in (
             'session.json', 'checkpoint.json', 'live-activities.jsonl', 'web-events.jsonl'):
         raise ValueError('Reserved output filename')
     return key
@@ -96,4 +96,10 @@ def load_config(path=None):
                        'source_path': s['path']} for s in sources}}
     manager = data.get('wazuh_manager', 'single-node-wazuh.manager-1')
     container_name(manager)
-    return {'sources': sources, 'correlation': correlation, 'wazuh_manager': manager}
+    context = data.get('context', {})
+    if not isinstance(context, dict) or type(context.get('enabled', False)) is not bool:
+        raise ValueError('context.enabled must be boolean')
+    from lab_context import validated_config
+    settings = validated_config({key: value for key, value in context.items() if key != 'enabled'})
+    return {'sources': sources, 'correlation': correlation, 'wazuh_manager': manager,
+            'context': {'enabled': context.get('enabled', False), **settings}}

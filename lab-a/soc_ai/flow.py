@@ -97,15 +97,28 @@ def split_for_group(key,seed=42):
     return 0 if bucket<7000 else 1 if bucket<8500 else 2
 
 def features(flow):
-    if flow['protocol'] not in ('TCP','UDP'): raise ValueError('unsupported protocol for model')
-    d=flow['duration_seconds']; p=flow['pkts_toserver']; q=flow['pkts_toclient']
-    b=flow['bytes_toserver']; c=flow['bytes_toclient']; denom=max(d,0.001)
+    if not isinstance(flow,dict): raise ValueError('flow must be an object')
+    try:
+        if flow['protocol'] not in ('TCP','UDP'): raise ValueError('unsupported protocol for model')
+        d=flow['duration_seconds']
+        try: valid_duration=not isinstance(d,bool) and isinstance(d,(int,float)) and math.isfinite(d) and d>=0
+        except OverflowError: valid_duration=False
+        if not valid_duration:
+            raise ValueError('flow duration must be finite and nonnegative')
+        p=counter(flow['pkts_toserver']); q=counter(flow['pkts_toclient'])
+        b=counter(flow['bytes_toserver']); c=counter(flow['bytes_toclient'])
+        app=flow['app_protocol']; state=flow['flow_state']
+        if not isinstance(app,str) or not isinstance(state,str):
+            raise ValueError('flow application/state must be strings')
+    except KeyError as error:
+        raise ValueError('missing feature input: '+str(error)) from error
+    denom=max(d,0.001)
     log=math.log1p
     values=[log(d*1000),log(p),log(q),log(b),log(c),log(b/max(p,1)),log(c/max(q,1)),
             log((p+q)/denom),log((b+c)/denom),q/max(p+q,1),c/max(b+c,1),
             log((b+c)/max(p+q,1)),float(flow['protocol']=='TCP'),float(flow['protocol']=='UDP')]
-    app=flow['app_protocol']; app=app if app in APPS else 'other'
-    state=flow['flow_state']; state=state if state in STATES else 'other'
+    app=app if app in APPS else 'other'
+    state=state if state in STATES else 'other'
     values += [float(app==x) for x in APPS]+[float(state==x) for x in STATES]
     result=np.asarray(values,dtype=np.float32)
     if not np.isfinite(result).all(): raise ValueError('nonfinite feature')
@@ -117,10 +130,48 @@ def fit_preprocessor(train_x):
     std=np.where(std<1e-6,1.0,std)
     return {'feature_hash':FEATURE_HASH,'mean':mean.tolist(),'std':std.tolist(),'clip':10.0}
 
+def _numeric_array(value,name,shape=None):
+    """Validate before casting: strings, booleans and infinities are not numbers here."""
+    try:
+        def has_boolean(item):
+            if isinstance(item,(bool,np.bool_)): return True
+            return isinstance(item,(list,tuple)) and any(has_boolean(child) for child in item)
+        if has_boolean(value): raise ValueError(name+' must not contain booleans')
+        raw=np.asarray(value)
+        if raw.dtype.kind not in 'fiu' or not np.isfinite(raw).all():
+            raise ValueError(name+' must contain finite numbers')
+        if shape is not None and raw.shape!=shape:
+            raise ValueError(name+' has an invalid shape')
+        with np.errstate(over='ignore',invalid='ignore'):
+            result=raw.astype(np.float32)
+        if not np.isfinite(result).all():
+            raise ValueError(name+' cannot be represented as finite float32')
+        return result
+    except (TypeError,OverflowError) as error:
+        raise ValueError('invalid '+name) from error
+
+def validate_preprocessor(preprocessor):
+    if not isinstance(preprocessor,dict) or preprocessor.get('feature_hash')!=FEATURE_HASH:
+        raise ValueError('feature schema mismatch')
+    try:
+        mean=_numeric_array(preprocessor['mean'],'preprocessor mean',(len(FEATURE_NAMES),))
+        std=_numeric_array(preprocessor['std'],'preprocessor std',mean.shape)
+        clip=preprocessor['clip']
+    except KeyError as error:
+        raise ValueError('missing preprocessor field: '+str(error)) from error
+    if np.any(std<=0): raise ValueError('preprocessor std must be positive')
+    if isinstance(clip,bool) or not isinstance(clip,(int,float)) or clip!=SPEC['standardized_clip']:
+        raise ValueError('preprocessor clip must match the feature contract')
+    return mean,std,float(clip)
+
 def transform(x,preprocessor):
-    if preprocessor['feature_hash']!=FEATURE_HASH: raise ValueError('feature schema mismatch')
-    mean=np.asarray(preprocessor['mean'],dtype=np.float32)
-    std=np.asarray(preprocessor['std'],dtype=np.float32)
-    if mean.shape!=(len(FEATURE_NAMES),) or std.shape!=mean.shape or np.any(std<=0):
-        raise ValueError('invalid preprocessor shape/std')
-    return np.clip((x-mean)/std,-preprocessor['clip'],preprocessor['clip']).astype(np.float32)
+    mean,std,clip=validate_preprocessor(preprocessor)
+    values=_numeric_array(x,'feature matrix')
+    if values.ndim!=2 or values.shape[1]!=len(FEATURE_NAMES):
+        raise ValueError('feature matrix must have shape (rows,24)')
+    # Finite extreme inputs can overflow during arithmetic; clipping infinities is
+    # intentional, while nonfinite inputs and preprocessor values were rejected.
+    with np.errstate(over='ignore',invalid='ignore',divide='ignore'):
+        scaled=np.clip((values-mean)/std,-clip,clip).astype(np.float32)
+    if not np.isfinite(scaled).all(): raise ValueError('nonfinite transformed features')
+    return scaled

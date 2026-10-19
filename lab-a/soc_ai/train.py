@@ -18,11 +18,79 @@ from .common import CLASSES,read_json,write_json,sha256
 from .flow import FEATURE_HASH,SPEC,fit_preprocessor,transform
 from .model import FlowMLP,save_weights,load_weights,predict_batches
 from .metrics import evaluate,choose_threshold
+from .data_contract import load_prepared
 from .workflow import Workflow,now
 from . import checkpoint,charts
 
 
 class PauseTraining(Exception): pass
+
+QUALITY_SELECTION = 'quality-present-class-and-attack-recall/0.2'
+LEGACY_QUALITY_SELECTION = 'quality-legacy/0.1'
+STANDARD_SELECTION = 'macro-f1-six-class/0.1'
+
+
+def quality_selection(y, probs, is_local, threshold, active_classes, *, policy=QUALITY_SELECTION):
+    """Choose an epoch with validation only; expose every component and support.
+
+    The legacy branch is retained so a pre-upgrade checkpoint keeps exactly the
+    objective used by its already committed best epoch.
+    """
+    from sklearn.metrics import f1_score
+    y = np.asarray(y)
+    local = np.asarray(is_local, dtype=bool)
+    if local.shape != y.shape or not local.any() or local.all():
+        raise ValueError('Quality selection requires both local and base validation rows')
+    pred = probs.argmax(axis=1)
+    local_labels = np.unique(y[local])
+    local_f1 = float(f1_score(y[local], pred[local], labels=local_labels, average='macro', zero_division=0))
+    external = evaluate(y[~local], probs[~local], threshold)
+    coverage = {name: int(np.sum(y[~local] == i)) for i, name in enumerate(CLASSES)}
+    if policy == LEGACY_QUALITY_SELECTION:
+        whole = evaluate(y, probs, threshold)
+        components = {
+            'external_six_class_macro_f1': float(external['multiclass']['macro avg']['f1-score']),
+            'local_present_class_macro_f1': local_f1,
+            'aggregate_validation_attack_recall': float(whole['binary_attack']['recall'] or 0),
+        }
+        score = len(components) / sum(1 / max(value, 1e-12) for value in components.values())
+    elif policy == QUALITY_SELECTION:
+        labels = np.unique(y[~local])
+        external_f1 = float(f1_score(y[~local], pred[~local], labels=labels, average='macro', zero_division=0))
+        missing = [CLASSES[i] for i, active in enumerate(active_classes) if active and coverage[CLASSES[i]] == 0]
+        if missing:
+            raise ValueError('Quality validation is missing active base classes: ' + ', '.join(missing))
+        attack_recalls = [float(external['attack_types'][name]['attack_alert_recall'])
+                          for i, name in enumerate(CLASSES[1:], 1) if active_classes[i]]
+        local_benign = local & (y == 0)
+        if not local_benign.any() or not attack_recalls:
+            raise ValueError('Quality validation requires local BENIGN and base attack examples')
+        local_specificity = float(np.mean((1.0 - np.asarray(probs[local_benign], dtype=np.float64)[:, 0]) < threshold))
+        components = {
+            'external_present_class_macro_f1': external_f1,
+            'local_present_class_macro_f1': local_f1,
+            'base_attack_class_macro_recall': float(np.mean(attack_recalls)),
+            'base_attack_class_minimum_recall': float(min(attack_recalls)),
+            'local_benign_specificity': local_specificity,
+        }
+        score = (len(components) / sum(1 / value for value in components.values())
+                 if all(value > 0 for value in components.values()) else 0.0)
+    else:
+        raise ValueError('Unknown quality selection policy: ' + str(policy))
+    detail = {
+        'policy': policy, 'aggregation': 'harmonic mean', 'components': components,
+        'external_class_support': coverage, 'local_rows': int(local.sum()),
+        'local_class_support': {name: int(np.sum(y[local] == i)) for i, name in enumerate(CLASSES)},
+        'threshold': float(threshold), 'threshold_source': 'validation BENIGN only',
+        'test_used_for_selection': False,
+        'note': 'Validation diagnostics select an epoch; independent detection quality remains unproven.',
+    }
+    if policy == QUALITY_SELECTION:
+        # A missed class gives primary score zero. Still track learning progress
+        # within an exact tie, rather than stopping while every epoch is zero.
+        detail['exact_tie_breaker'] = {'policy': 'mean validation components',
+                                      'value': float(np.mean(list(components.values())))}
+    return float(score), detail
 
 def weighted_validation_loss(y,probs,weights):
     selected=np.clip(probs[np.arange(len(y)),y],1e-12,1)
@@ -59,26 +127,27 @@ def run(prepared,output,epochs=20,batch_size=2048,device_name='cuda',patience=5,
 
 def _run(prepared,output,workflow,saved,epochs,batch_size,device_name,patience,skip_baseline,checkpoint_seconds,pause_after_batches,local_loss_fraction):
     workflow.update('load','Checking dataset integrity and loading arrays')
-    report=read_json(prepared/'report.json')
-    if report.get('version')!='soc-prepared/0.1' or report.get('complete') is not True: raise ValueError('Prepared data incomplete/wrong version')
-    if report['feature_hash']!=FEATURE_HASH or report['classes']!=CLASSES: raise ValueError('Prepared feature/class schema mismatch')
-    data_hash=sha256(prepared/'data.npz'); report_hash=sha256(prepared/'report.json')
-    if data_hash!=report['data_sha256']: raise ValueError('Prepared data hash mismatch')
+    prepared_data=load_prepared(prepared)
+    report=prepared_data.report
+    data_hash=prepared_data.data_sha256; report_hash=prepared_data.report_sha256
     if min(epochs,batch_size,patience,checkpoint_seconds)<1: raise ValueError('Training settings must be positive')
     if saved and (saved['prepared_data_sha256']!=data_hash or saved['prepared_report_sha256']!=report_hash or saved['feature_hash']!=FEATURE_HASH):
         raise ValueError('Resume dataset/feature mismatch')
     if device_name=='cuda' and not torch.cuda.is_available(): raise ValueError('CUDA unavailable; no silent CPU fallback')
     device=torch.device(device_name); seed=report['seed']
+    selection_policy=(saved['config'].get('selection_policy', LEGACY_QUALITY_SELECTION if local_loss_fraction else STANDARD_SELECTION)
+                      if saved else QUALITY_SELECTION if local_loss_fraction else STANDARD_SELECTION)
+    if selection_policy not in (QUALITY_SELECTION,LEGACY_QUALITY_SELECTION,STANDARD_SELECTION):
+        raise ValueError('Unsupported saved selection policy')
     cfg={'prepared_path':str(prepared),'epochs':epochs,'batch_size':batch_size,'device':device_name,
          'patience':patience,'skip_baseline':skip_baseline,'checkpoint_seconds':checkpoint_seconds,'seed':seed,
-         'torch_version':str(torch.__version__),'local_loss_fraction':local_loss_fraction}
+         'torch_version':str(torch.__version__),'local_loss_fraction':local_loss_fraction,'selection_policy':selection_policy}
     if saved and saved['config']['torch_version']!=str(torch.__version__): raise ValueError('Resume requires the same PyTorch version')
     random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)
     if device.type=='cuda': torch.cuda.manual_seed_all(seed)
     torch.set_num_threads(4)
-    with np.load(prepared/'data.npz',allow_pickle=False) as a:
-        x=a['x'].copy(); y=a['y'].copy(); split=a['split'].copy(); tier=a['tier'].copy(); day=a['day'].copy()
-    if not np.isfinite(x).all(): raise ValueError('Nonfinite input')
+    arrays=prepared_data.arrays
+    x=arrays['x']; y=arrays['y']; split=arrays['split']; tier=arrays['tier']; day=arrays['day']
     if not 0<=local_loss_fraction<.5: raise ValueError('local-loss-fraction must be >=0 and <0.5')
     local_codes=[i for i,name in enumerate(report['day_names']) if name.startswith('LAB:')]
     is_local=np.isin(day,local_codes)
@@ -94,17 +163,29 @@ def _run(prepared,output,workflow,saved,epochs,batch_size,device_name,patience,s
     counts=np.bincount(y[masks[0]],minlength=len(CLASSES)); active_np=counts>0
     if counts[0]==0 or np.sum(active_np)<2: raise ValueError('Training requires BENIGN and an attack class')
     if not np.any(y[masks[1]]==0): raise ValueError('Validation needs BENIGN')
-    metadata=saved['metadata'] if saved else {'version':'soc-flow-model/0.1','software_version':'0.2.1-quality','complete':False,
+    if local_loss_fraction and selection_policy==QUALITY_SELECTION:
+        base_val=masks[1] & ~is_local
+        missing=[CLASSES[i] for i,active in enumerate(active_np) if active and not np.any(y[base_val]==i)]
+        if missing: raise ValueError('Quality validation is missing active base classes: '+', '.join(missing))
+    metadata=saved['metadata'] if saved else {'version':'soc-flow-model/0.1','software_version':'0.4.0-research','complete':False,
         'production_ready':False,'experimental_labels':True,'feature_hash':FEATURE_HASH,'classes':CLASSES,
         'active_classes':active_np.tolist(),'prepared_report_sha256':report_hash,'prepared_data_sha256':data_hash,
         'split_policy':report['split_policy'],'device':str(device),'gpu':torch.cuda.get_device_name(0) if device.type=='cuda' else None,
         'environment':{'python':sys.version,'torch':str(torch.__version__),'numpy':np.__version__,
                        'cuda_runtime':torch.version.cuda,'platform':platform.platform()},
         'hyperparameters':cfg,'missing_training_classes':[c for c,ok in zip(CLASSES,active_np) if not ok]}
-    metadata['complete']=False; metadata['paused']=False; write_json(output/'model.json',metadata)
-    preprocessor=read_json(output/'preprocessor.json') if saved else fit_preprocessor(x[masks[0]])
+    metadata['complete']=False; metadata['paused']=False
+    metadata['prepared_contract']=prepared_data.validation
+    metadata['training_provenance']=prepared_data.provenance
+    metadata['synthetic_fixture']=prepared_data.provenance['synthetic_fixture']
+    metadata['selection_policy']=selection_policy
+    write_json(output/'model.json',metadata)
+    expected_preprocessor=fit_preprocessor(x[masks[0]])
+    preprocessor=read_json(output/'preprocessor.json') if saved else expected_preprocessor
+    if saved and preprocessor!=expected_preprocessor: raise ValueError('Resume preprocessor mismatch; training-only preprocessing changed')
     write_json(output/'preprocessor.json',preprocessor); write_json(output/'features.json',SPEC)
     scaled=transform(x,preprocessor); del x
+    arrays.pop('x')  # Release the unscaled cache rather than retaining a second full feature matrix.
     xs=[scaled[mask] for mask in masks]; ys=[y[mask] for mask in masks]
     active=torch.tensor(active_np,dtype=torch.bool,device=device)
     weights=np.sqrt(counts[active_np].sum()/np.maximum(counts,1)).astype(np.float32)
@@ -118,7 +199,7 @@ def _run(prepared,output,workflow,saved,epochs,batch_size,device_name,patience,s
         factor=local_loss_fraction/(1-local_loss_fraction)*base_mass/local_mass
         domain_weights[local_train]=factor
         metadata['training_policy']={'local_loss_fraction':local_loss_fraction,
-            'local_sample_weight':factor,'selection':'harmonic external macro F1, local present-class macro F1, validation attack recall',
+            'local_sample_weight':factor,'selection':selection_policy,
             'threshold':'maximum validation BENIGN 99th percentile across base and whole local sessions',
             'quality_is_unproven_until_independent_lab_attack_tests':True}
     weight_tensor=torch.from_numpy(weights).to(device)
@@ -189,24 +270,28 @@ def _run(prepared,output,workflow,saved,epochs,batch_size,device_name,patience,s
             val=evaluate(ys[1],val_probs,val_threshold); score=float(val['multiclass']['macro avg']['f1-score'])
             selection_score=score
             if local_loss_fraction:
-                from sklearn.metrics import f1_score
                 local_val=is_local[masks[1]]
-                local_f1=float(f1_score(ys[1][local_val],val_probs[local_val].argmax(axis=1),
-                    labels=np.unique(ys[1][local_val]),average='macro',zero_division=0))
-                external=evaluate(ys[1][~local_val],val_probs[~local_val],val_threshold)
-                components=[float(external['multiclass']['macro avg']['f1-score']),local_f1,
-                            float(val['binary_attack']['recall'] or 0)]
-                selection_score=len(components)/sum(1/max(v,1e-12) for v in components)
+                selection_score,selection_detail=quality_selection(ys[1],val_probs,local_val,val_threshold,active_np,policy=selection_policy)
+            else:
+                selection_detail={'policy':STANDARD_SELECTION,'components':{'six_class_macro_f1':score},
+                    'test_used_for_selection':False,'threshold':.5,'threshold_source':'fixed diagnostic threshold'}
 
             row={'epoch':epoch,'train_loss':state['loss_sum']/max(state['weight_sum'],1e-12),
                  'validation_loss':weighted_validation_loss(ys[1],val_probs,weights),'validation_macro_f1':score,
                  'validation_metrics':val,'global_step':state['global_step']}
             state['history'].append(row)
             row['quality_selection_score']=selection_score
-            if selection_score>state['best']+1e-5:
+            row['validation_selection']=selection_detail
+            improved=selection_score>state['best']+1e-5
+            if local_loss_fraction and selection_policy==QUALITY_SELECTION and selection_score==state['best']:
+                improved=selection_detail['exact_tie_breaker']['value']>state.get('best_quality_tiebreaker',-1.0)+1e-5
+            if improved:
                 state['best']=selection_score; state['stale']=0; state['best_state']=checkpoint.cpu_copy(model.state_dict())
+                if local_loss_fraction and selection_policy==QUALITY_SELECTION:
+                    state['best_quality_tiebreaker']=selection_detail['exact_tie_breaker']['value']
                 metadata['best_epoch']=epoch; metadata['best_validation_macro_f1']=score
                 metadata['best_selection_score']=selection_score
+                metadata['best_validation_selection']=selection_detail
             else: state['stale']+=1
             state.update(epoch=epoch+1,offset=0,loss_sum=0.0,weight_sum=0.0)
             state['training_done']=state['stale']>=patience or epoch>=epochs
@@ -225,8 +310,10 @@ def _run(prepared,output,workflow,saved,epochs,batch_size,device_name,patience,s
         tp=predict_batches(model,xs[2],device,active,poll=poll)
         evaluation={'version':'soc-flow-evaluation/0.1','provisional_ground_truth':True,
           'threshold_policy':('maximum validation BENIGN 99th percentile across global and day/session groups' if local_loss_fraction else 'validation BENIGN 99th percentile; exploratory observed 1% FPR target'),
-          'validation':evaluate(ys[1],vp,threshold),'test':evaluate(ys[2],tp,threshold),'test_subsets':{},'validation_subsets':{},'warnings':report['warnings']}
-        for variable,values,names in [('tier',tier,['strict','near_duration']),('day',day,report['day_names'])]:
+          'validation':evaluate(ys[1],vp,threshold),'test':evaluate(ys[2],tp,threshold),'test_subsets':{},'validation_subsets':{},'warnings':report['warnings'],
+          'selection_policy':selection_policy,'best_validation_selection':metadata.get('best_validation_selection'),
+          'training_provenance':prepared_data.provenance,'synthetic_fixture':prepared_data.provenance['synthetic_fixture']}
+        for variable,values,names in [('tier',tier,report.get('tier_names',['strict','near_duration','controlled_lab'])),('day',day,report['day_names'])]:
             test_values=values[masks[2]]
             for code,name in enumerate(names):
                 select=test_values==code

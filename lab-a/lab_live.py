@@ -156,6 +156,14 @@ class LiveCollector(Collector):
         self.activities = Activities(self.folder, self.publisher)
         self.observer.activities = self.activities
         self.eve_sources = [(s['output'], s['container']) for s in getattr(args, 'runtime', {}).get('sources', []) if s['kind'] == 'eve'] or [('suricata-eve.jsonl', 'ubuntu-endpoint')]
+        self.context = None
+        context = dict(getattr(args, 'runtime', {}).get('context', {}))
+        context_enabled = context.pop('enabled', False)
+        if getattr(args, 'context', None) is not None:
+            context_enabled = args.context
+        if context_enabled:
+            from context_runtime import ContextJournal
+            self.context = ContextJournal(self.folder, args.runtime['sources'], context)
         self.correlator = None
         if not getattr(args, 'no_correlation', False):
             from lab_correlation import Correlator
@@ -172,13 +180,23 @@ class LiveCollector(Collector):
 
     def write_status(self, status, error=None):
         from soc_ai.common import write_json
+        context_state = self.context.write_status(status) if self.context else None
+        issues = {'invalid_prediction_inputs': self.observer.counts['invalid_flow_or_json'],
+                  'unfinished_eve_sources': [name for name, (_, tail) in self.observer.source_positions.items() if tail],
+                  'invalid_correlation_inputs': self.correlator.counts['invalid_source_records'] if self.correlator else 0,
+                  'unfinished_correlation_sources': [name for name, tail in self.correlator.pending.items() if tail] if self.correlator else [],
+                  'context_incomplete': context_state['quality']['incomplete'] if context_state else False,
+                  'capture_incomplete': self.state['status'] != 'completed'}
+        if status == 'completed' and any(issues.values()):
+            status = 'degraded'
         if self.correlator:
             correlation_status = status
             if status == 'completed' and self.correlator.counts['invalid_source_records']:
                 correlation_status = 'degraded'
             self.correlator.write(correlation_status, self.state['status'])
-        write_json(self.folder / 'ai-session.json', {
+        report = {
             'version': 'soc-live-observer/0.4', 'status': status,
+            'software_version': '0.4.0-research',
             'complete': status == 'completed', 'mode': 'observe',
             'started_at': self.live_started, 'updated_at': now(),
             'model_directory': self.observer.model_path,
@@ -186,9 +204,17 @@ class LiveCollector(Collector):
             'feature_hash': self.observer.predictor.metadata['feature_hash'],
             'endpoints': sorted(self.observer.endpoints) if self.observer.endpoints else None,
             'counts': dict(self.observer.counts), 'capture_status': self.state['status'],
+            'quality_issues': issues,
             'capture_gaps': self.state['gaps'], 'error': error,
             'correlation_implemented': self.correlator is not None,
             'correlation_case_count': len(self.correlator.cases) if self.correlator else 0,
+            'context_shadow': {'enabled': self.context is not None,
+                'signal_count': len(context_state['signals']) if context_state else 0,
+                'quality': context_state['quality'] if context_state else None,
+                'complete': context_state['complete'] if context_state else None,
+                'runtime_counts': context_state['runtime_counts'] if context_state else None,
+                'unfinished_source_lines': context_state['unfinished_source_lines'] if context_state else [],
+                'publication_enabled': False, 'model_predictions_modified': False},
             'automatic_response': False,
             'sources': self.state['sources'],
             'wazuh_publication': {'enabled': self.publisher is not None,
@@ -196,7 +222,9 @@ class LiveCollector(Collector):
                 'last_error': self.publisher.last_error if self.publisher else None,
                 'ack_means': 'appended to manager log; indexing must be verified separately'},
             'note': 'Completed-flow inference; emission can follow connection closure by a sensor timeout. '
-                    'Raw event logs are preserved. Predictions are not training labels.'})
+                    'Raw event logs are preserved. Predictions are not training labels.'}
+        write_json(self.folder / 'ai-session.json', report)
+        return report
 
     def poll(self):
         more = super().poll()
@@ -205,6 +233,8 @@ class LiveCollector(Collector):
         if self.correlator:
             more = self.correlator.consume() or more
             self.activities.correlation(self.correlator)
+        if self.context:
+            more = self.context.consume() or more
         self.activities.flush()
         if self.publisher:
             self.publisher.flush()
@@ -247,6 +277,11 @@ def parser():
     p.add_argument('--config', type=Path, help='Sources, asset identities and correlation configuration')
     p.add_argument('--publish-wazuh', action='store_true', help='Send summaries after setup_wazuh.py has installed rules')
     p.add_argument('--no-correlation', action='store_true')
+    context = p.add_mutually_exclusive_group()
+    context.add_argument('--context', dest='context', action='store_true', default=None,
+                         help='Enable local shadow context indicators; does not alter model predictions')
+    context.add_argument('--no-context', dest='context', action='store_false',
+                         help='Disable the optional local context branch')
     p.add_argument('--correlation-config', type=Path)
     return p
 
@@ -298,19 +333,24 @@ def main():
             while collector.correlator.consume():
                 pass
             collector.activities.correlation(collector.correlator)
+        if collector.context:
+            while collector.context.consume():
+                pass
         collector.activities.flush(force=True)
         if collector.publisher:
             collector.publisher.flush()
-        collector.write_status('completed' if result == 0 else 'degraded')
+        final_status = collector.write_status('completed' if result == 0 else 'degraded')
         print('AI_OUTPUT:', collector.observer.predictions, flush=True)
         if collector.correlator:
             print('CORRELATION_OUTPUT:', collector.correlator.snapshot, flush=True)
         print('ACTIVITY_OUTPUT:', collector.activities.path, flush=True)
+        if collector.context:
+            print('CONTEXT_SHADOW_OUTPUT:', collector.context.status, flush=True)
         if collector.publisher:
             print('WAZUH_PENDING:', collector.publisher.pending,
                   'LAST_ERROR:', collector.publisher.last_error, flush=True)
         show_footer()
-        return result
+        return 2 if result == 0 and not final_status['complete'] else result
     except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
         print('ERROR:', exc, file=sys.stderr, flush=True)
         if collector:
