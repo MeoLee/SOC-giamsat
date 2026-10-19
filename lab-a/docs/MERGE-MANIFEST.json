@@ -1,0 +1,336 @@
+{
+  "integration_version": "0.3.0-candidate.1",
+  "inputs": [
+    {
+      "name": "SOC-AI-v0.2.rar",
+      "sha256": "939e81c971f828346f2b92b6b886dc7235cd8ceae84beba968f4d79fef3e5335"
+    },
+    {
+      "name": "utilities.rar",
+      "sha256": "d336a19216e09297389d046aed4f0b72d298beac56fe1d01fceee42e8e21f9de"
+    },
+    {
+      "name": "Lab-Flow-Check-Fix.zip",
+      "sha256": "8c69400da79a85abb4d3ef6a3366474313ea5ba541c7347e778fa478488b4b69"
+    },
+    {
+      "name": "SOC-AI-Live-Observer-v0.1.zip",
+      "sha256": "bef8f7a6b375345fdfd173584f4edc2e1203c235169fcfda02b594893125d801"
+    },
+    {
+      "name": "SOC-AI-Live-Observer-v0.2.zip",
+      "sha256": "9cd01570fbd559a98c90aa37250f0a146da3978dabea3561b30a5888b1ae50a8"
+    },
+    {
+      "name": "SOC-AI-Live-Observer-v0.3.1.zip",
+      "sha256": "9744c3d0f14a2c32e2162bd614b228d1975f33c9b9147a2dd92bc3ea036eb378"
+    },
+    {
+      "name": "SOC-AI-Live-Observer-v0.3.zip",
+      "sha256": "213838ec55cab322bd94f63cf1d63233ce946253ca5de0050db369449732e464"
+    },
+    {
+      "name": "SOC-AI-Live-Observer-v0.4.zip",
+      "sha256": "0a514327bf6654f4de722f1250550e19f5b0e59a193b40c169194daa3f2abbfe"
+    },
+    {
+      "name": "SOC-AI-Local-Data-v0.1.zip",
+      "sha256": "298bfded95cd7aea776ac9a7e5544aca8314461d31286f6d663692d310c25f70"
+    },
+    {
+      "name": "SOC-AI-Quality-Update.zip",
+      "sha256": "6c7f81add77d25ee8838182b0b32a15ee87013e9a8f744a9fae21c5034fa5c00"
+    },
+    {
+      "name": "SOC-AI-UI-Update.zip",
+      "sha256": "e1d8ddf130e614d2ab69dda2a5cd9543917854789ba6adc73c311b63d6363153"
+    },
+    {
+      "name": "SOC-AI-v0.2-Windows-IO-Fix.zip",
+      "sha256": "8e1656a4620ace99c3581060e71b453d9538efa3cb53a25825abc8457a91b30f"
+    },
+    {
+      "name": "SOC-AI-v0.2-Windows-IO-Fix2.zip",
+      "sha256": "31b47d504cae9918d2ad6f3e4d1e4450c53c19dedd14ffbcbfc7e53e7bd20a65"
+    },
+    {
+      "name": "SOC-Web-Lab-v0.1.zip",
+      "sha256": "60018f1a990aeb6ef5ca1b0eaa3429177070a689b42b6da82c477ea9fb251210"
+    }
+  ],
+  "overlays": [
+    {
+      "file": "collect_normal_http.py",
+      "source": "SOC-AI-Quality-Update.zip"
+    },
+    {
+      "file": "quality_audit.py",
+      "source": "SOC-AI-Quality-Update.zip"
+    },
+    {
+      "file": "test_quality_update.py",
+      "source": "SOC-AI-Quality-Update.zip"
+    },
+    {
+      "file": "test_quality_training.py",
+      "source": "SOC-AI-Quality-Update.zip"
+    },
+    {
+      "file": "prepare_lab_mix.py",
+      "source": "SOC-AI-Quality-Update.zip"
+    },
+    {
+      "file": "prepare_quality_data.py",
+      "source": "SOC-AI-Quality-Update.zip"
+    },
+    {
+      "file": "soc_ai/metrics.py",
+      "source": "SOC-AI-Quality-Update.zip"
+    },
+    {
+      "file": "soc_ai/predict.py",
+      "source": "SOC-AI-Quality-Update.zip"
+    },
+    {
+      "file": "soc_ai/train.py",
+      "source": "SOC-AI-Quality-Update.zip"
+    },
+    {
+      "file": "setup_web_lab.py",
+      "source": "SOC-Web-Lab-v0.1.zip"
+    },
+    {
+      "file": "test_web_setup.py",
+      "source": "SOC-Web-Lab-v0.1.zip"
+    },
+    {
+      "file": "endpoint/setup_web.py",
+      "source": "SOC-Web-Lab-v0.1.zip"
+    },
+    {
+      "file": "endpoint/start-soc-web.sh",
+      "source": "SOC-Web-Lab-v0.1.zip"
+    }
+  ],
+  "preserved": [
+    "Live Observer v0.4 + UI already in base",
+    "base Windows closed-file snapshots with generic PermissionError bounded retry",
+    "24 flow features and six classes"
+  ],
+  "excluded": [
+    "all __pycache__, *.pyc, .vscode",
+    "superseded live patches v0.1-v0.3.1",
+    "old I/O patches",
+    "patch installers",
+    "analysis-uploaded-flows.json (user traffic sample)"
+  ],
+  "code_origin": "Lab A uploads; no Lab B source copied",
+  "baseline_files": [
+    {
+      "path": ".dockerignore",
+      "sha256": "18ccc568f45bcf7c85b5deaa11abc3155e51b2b5d4f5f2611a7580d3b2f62c69"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "5c37dea49288b689ad34acabcc259c711ff550c4c1cc343113aaed000d8b6bfd"
+    },
+    {
+      "path": "Dockerfile",
+      "sha256": "5b8d5b1ead7d57f47ca2456d19ea67f08553575a25b1c0899c94b3560e404758"
+    },
+    {
+      "path": "LOCAL-DATA-README.md",
+      "sha256": "79b86db667ac7c3052a83c0b08e6ebbc41d59bc049927cfcbfe0fec738162bd7"
+    },
+    {
+      "path": "README-LIVE.md",
+      "sha256": "09cdab5dceb9d8e958b69808afde74c6de23fc58b6ddda14cb69aac0013069cb"
+    },
+    {
+      "path": "README.md",
+      "sha256": "dac3b392a39044b899c1b04bf0010e286325acde9d52db9033812c56f196b754"
+    },
+    {
+      "path": "Start-AI-Live.cmd",
+      "sha256": "010cc229cb9696f99ebed99a646e7bafac202e903da613007a11599a116ef2da"
+    },
+    {
+      "path": "configure_web_live.py",
+      "sha256": "5c4c4d3ff0b1633efec884c47b001361b7939ed192021cdd04f20a82197e62e9"
+    },
+    {
+      "path": "correlation-config.json",
+      "sha256": "b2480eb19d12a95eb50cd57e66667d840eddbec575d2a63b14d470de9688e9ca"
+    },
+    {
+      "path": "import_lab_normal.py",
+      "sha256": "4a4ea1a029b69cf5dc9e8501bda783503b80d403df776df5398aacb4da32efc8"
+    },
+    {
+      "path": "lab_correlation.py",
+      "sha256": "a8b2a612faf21c0467f27dd082a56cc202cdb735521e9fe0750cb929be9eb11c"
+    },
+    {
+      "path": "lab_flow_check.py",
+      "sha256": "0210b6afd3e76e410571ce4cfd236ae86178878bf3edf6320cdd048fda5411ce"
+    },
+    {
+      "path": "lab_live.py",
+      "sha256": "0bacff8240bd32b06cc716717d06e8ddc6dc1d030ead90ded0267d1f5a590894"
+    },
+    {
+      "path": "lab_web.py",
+      "sha256": "f425250e4aad3350979346e790a13bbe8155c9233b319c85e6d45b72c1b823bc"
+    },
+    {
+      "path": "live-config.json",
+      "sha256": "1e3abe2a40c27924915a169c091a9883ab6e54c1ed1bb2baf2524041a20df100"
+    },
+    {
+      "path": "live_activity.py",
+      "sha256": "b3b9c30fd27467246289a3cf793fd7823f8fe2c253b74a5eeba000d70b90434d"
+    },
+    {
+      "path": "live_config.py",
+      "sha256": "910fdc3705bd613784f07d7e99e1111bfa2e88ad8c707b00a5866d6ef579c236"
+    },
+    {
+      "path": "live_ui.py",
+      "sha256": "523f23ac28335b21e5d1503db7891412e09a4465d910a7e04f0c944914181853"
+    },
+    {
+      "path": "prepare_lab_mix.py",
+      "sha256": "c2ae9d038bbf2b74d16eba242b746832160cc6c4473ad9bd73bce284293ad7fa"
+    },
+    {
+      "path": "requirements.txt",
+      "sha256": "431831003c6d3bcfba9a45cfdb3ee25e75395af26e88b7953431f02c3850e37b"
+    },
+    {
+      "path": "setup_suricata_web.py",
+      "sha256": "bb6579767f9a34f4ff583fbd5b943200aa58aefbaaffb9f3f30b2dfa2185c27e"
+    },
+    {
+      "path": "setup_wazuh.py",
+      "sha256": "51b62afae5f93d85a83bb5f004b52457e4a18255a701c6c2a5203161a9ce4d6c"
+    },
+    {
+      "path": "soc-web.rules",
+      "sha256": "ad606bd0aea53d5ed02be2d9b95986eaeda7b1d7df3789f96f9b092516a041da"
+    },
+    {
+      "path": "soc_ai/__init__.py",
+      "sha256": "7dab1e90a9b7aca2b860242586a4967227620e17b31c7d934dd8ee565a7264cc"
+    },
+    {
+      "path": "soc_ai/__main__.py",
+      "sha256": "5c559397745407b5ff9bf785a7055707fb04f23da4f056ad2d9b9ee7a6246f2e"
+    },
+    {
+      "path": "soc_ai/charts.py",
+      "sha256": "9f509b5e2c5422bebd38cd9a48554c3e1a96d1190e3f306ee67c7e07f924d259"
+    },
+    {
+      "path": "soc_ai/checkpoint.py",
+      "sha256": "1c683d82b2671aad6979afaa4d00c936e3fe878aa7136f3724072a854d89d46e"
+    },
+    {
+      "path": "soc_ai/common.py",
+      "sha256": "ae7288aa11c03a00cd052b5493bde24767f294779ced74e03ee919f6b9e0a92f"
+    },
+    {
+      "path": "soc_ai/dashboard.py",
+      "sha256": "bcce0a9771189fc121a6a96832adfd571cae397752d01f734a0953033d3b1d87"
+    },
+    {
+      "path": "soc_ai/fileio.py",
+      "sha256": "36579ed6099fdc940612f306b6a1e5bb9fe3d44ab04c1b47b13e3033027608a5"
+    },
+    {
+      "path": "soc_ai/flow.py",
+      "sha256": "85194ee0a6c6901ae3d31cac508b6bb63313cdc996c6c324cfb0a3c4044b9147"
+    },
+    {
+      "path": "soc_ai/metrics.py",
+      "sha256": "2d7634863af0cc6a416c42ad7e57c73091a4e73f465706d997e871fa56f36cfe"
+    },
+    {
+      "path": "soc_ai/model.py",
+      "sha256": "71ea03ff6c059358d842d443a79b05e4b0f8becfd32bba1b65f7c46b0b3b230d"
+    },
+    {
+      "path": "soc_ai/predict.py",
+      "sha256": "12c0b5e3eecc4a7091ea361fdae7683f018a416a521e49953f2e8e27202346ea"
+    },
+    {
+      "path": "soc_ai/prepare.py",
+      "sha256": "41134bd0a22e8c2dc8b1e8ea4ac182b964ec911ab92bfd46ffd66c5231e2d3a8"
+    },
+    {
+      "path": "soc_ai/train.py",
+      "sha256": "3979643070724f48caedcf281ba872dfb3af8ab0f01bf5b5aebe610013a86b3c"
+    },
+    {
+      "path": "soc_ai/web/dashboard.html",
+      "sha256": "dbe90c902169e38af54a94e7fc78985024764e11e59b2ea9a2534ad0d8d33ab3"
+    },
+    {
+      "path": "soc_ai/workflow.py",
+      "sha256": "4ce075a17cc354832d381ab1a0e5705ac1c35b155e4d1cca31f4c48839ee0794"
+    },
+    {
+      "path": "soc_ai_bridge_rules.xml",
+      "sha256": "dec43ca069f937311411e0d353d1e18e11049e3ac210d0a331d84a427d465743"
+    },
+    {
+      "path": "soc_live_collector.py",
+      "sha256": "e380590700cebe00ca05600b95e965bf7ee4505abeb0882394902320887a92ff"
+    },
+    {
+      "path": "test_lab_correlation.py",
+      "sha256": "7cccdfb7f086bad08476b79586d7beb80fa025aa6225e75159a6362f831e9ed4"
+    },
+    {
+      "path": "test_lab_live.py",
+      "sha256": "415779497baba7b914796a412d0052c30d4a8450862a03e54de53b4ea632c53f"
+    },
+    {
+      "path": "test_lab_web.py",
+      "sha256": "4bea9284bfc05691523b3bbd1c089e4d0321035574337560a7f19fe3774b3f42"
+    },
+    {
+      "path": "test_live_deployment.py",
+      "sha256": "1f8f9523f58757d378cadfd1671234b6c3084464dd57d995d0f6144f8c60fb44"
+    },
+    {
+      "path": "test_local_data.py",
+      "sha256": "94e6494d8c64517f778eb27f94261c6bacdb27d563f4fbad12dacf6f3605a91c"
+    },
+    {
+      "path": "tests/test_pipeline.py",
+      "sha256": "3e3346200691d6e5c572b6e0c6b2eaf70ab413b9ba1fbcd33240612c3073c2be"
+    },
+    {
+      "path": "tests/test_resume_dashboard.py",
+      "sha256": "6a0b4c61fda9838866700c713aa8ee9cf9f02fbbba3f5a8143fe1eedb6fc2f5d"
+    },
+    {
+      "path": "tests/test_windows_fileio.py",
+      "sha256": "f04c4af71cbbe082a830ac01356180ff04395dfbfb85b980a39d54835d82c191"
+    },
+    {
+      "path": "wazuh_bridge.py",
+      "sha256": "81a3dda3af8ca27b053d79fca310e919dec6b2ba22bf87b870072392bb817335"
+    }
+  ],
+  "integration_edits": {
+    "live_config.py": "Validate Windows outputs, source uniqueness, containers, asset identity; export source provenance",
+    "lab_correlation.py": "Decoded Wazuh EVE fallback, validated IDs/ports/timestamps and replay source paths, evidence byte offsets",
+    "soc_ai/flow.py": "Reject lossy IDs and malformed timestamps; feature extraction/spec unchanged",
+    "lab_doctor.py": "New read-only configuration/model/runtime checks",
+    "run_checks.py": "New runner covering both test locations",
+    "test_integration_contracts.py": "11 regression/integration cases motivated by Lab B review",
+    "docs/": "Integration decisions, Windows steps, validation scope and original patch guides"
+  },
+  "text_normalization": "Python LF and EOF whitespace normalized; fileio/model AST matches uploaded base. CMD retains CRLF. See .gitattributes."
+}

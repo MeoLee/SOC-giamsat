@@ -1,0 +1,10 @@
+{
+  "protected_host": "ubuntu-endpoint",
+  "protected_ip": "172.20.0.3",
+  "agent_id": "001",
+  "failure_threshold": 8,
+  "failure_window_seconds": 60,
+  "success_window_seconds": 300,
+  "recon_window_seconds": 600,
+  "max_events": 50000
+}

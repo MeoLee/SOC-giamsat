@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv*/
+.pytest_cache/
+.DS_Store
+# Runtime artifacts and private experiment material stay outside source control.
+lab-a/runs/
+lab-a/live/
+lab-a/raw/
+lab-a/prepared*/
+lab-a/quality-data/
+lab-a/*.sqlite*
+lab-a/*.pt
+lab-a/*.npz
+lab-a/doctor-result.json

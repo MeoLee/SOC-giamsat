@@ -1,0 +1,51 @@
+{
+  "sources": [
+    {
+      "kind": "auth",
+      "container": "ubuntu-endpoint",
+      "path": "/var/log/auth.log",
+      "output": "ubuntu-auth.log"
+    },
+    {
+      "kind": "eve",
+      "container": "ubuntu-endpoint",
+      "path": "/var/log/suricata/eve.json",
+      "output": "suricata-eve.jsonl"
+    },
+    {
+      "kind": "wazuh",
+      "container": "single-node-wazuh.manager-1",
+      "path": "/var/ossec/logs/alerts/alerts.json",
+      "output": "wazuh-alerts.jsonl"
+    },
+    {
+      "kind": "web",
+      "container": "ubuntu-endpoint",
+      "path": "/var/log/apache2/soc-lab-requests.tsv",
+      "output": "apache-requests.tsv"
+    },
+    {
+      "kind": "raw",
+      "container": "ubuntu-endpoint",
+      "path": "/var/log/apache2/soc-lab-access.log",
+      "output": "apache-access.log"
+    }
+  ],
+  "assets": [
+    {
+      "host": "ubuntu-endpoint",
+      "ips": [
+        "172.20.0.3",
+        "172.18.0.5"
+      ]
+    }
+  ],
+  "correlation": {
+    "failure_threshold": 8,
+    "failure_window_seconds": 60,
+    "success_window_seconds": 300,
+    "recon_window_seconds": 600,
+    "max_events": 50000
+  },
+  "wazuh_manager": "single-node-wazuh.manager-1"
+}

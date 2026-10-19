@@ -1,0 +1,49 @@
+<!-- SOC-AI MANAGED v0.4; separate from existing lab rules -->
+<group name="soc_ai,">
+  <rule id="119200" level="0">
+    <decoded_as>json</decoded_as>
+    <field name="soc_ai_producer">^soc-ai-live$</field>
+    <description>SOC AI bridge event.</description>
+  </rule>
+  <rule id="119201" level="3">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^connection_test$</field>
+    <description>SOC AI: connection test received.</description>
+    <group>soc_ai_connection_test,</group>
+  </rule>
+  <rule id="119202" level="5">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^model_summary$</field>
+    <field name="decision">^possible_attack$</field>
+    <description>SOC AI prediction (unverified): $(predicted_label), $(source_ip) to $(target_ip), flows=$(flow_count).</description>
+    <group>soc_ai_model_prediction,</group>
+  </rule>
+  <rule id="119203" level="8">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^correlation$</field>
+    <field name="case_status">^possible_recon$</field>
+    <description>SOC AI correlation: possible reconnaissance from $(source_ip) to $(target_ip).</description>
+    <group>soc_ai_correlation,recon,</group>
+  </rule>
+  <rule id="119204" level="12">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^correlation$</field>
+    <field name="case_status">^possible_password_guessing$</field>
+    <description>SOC AI correlation: repeated password failures from $(source_ip) for $(username) on $(target_host).</description>
+    <group>soc_ai_correlation,authentication_failures,</group>
+  </rule>
+  <rule id="119205" level="13">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^correlation$</field>
+    <field name="case_status">^suspicious_login_sequence$</field>
+    <description>SOC AI correlation: successful login after repeated password failures from $(source_ip) for $(username) on $(target_host); investigate.</description>
+    <group>soc_ai_correlation,authentication_success,</group>
+  </rule>
+  <rule id="119206" level="8">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^correlation$</field>
+    <field name="case_status">^possible_web_sqli$</field>
+    <description>SOC AI HTTP evidence: possible SQL injection from $(source_ip) to $(target_host). Exploitation success is not proven.</description>
+    <group>soc_ai_correlation,web,sql_injection,</group>
+  </rule>
+</group>
