@@ -129,9 +129,68 @@ class DashboardTests(unittest.TestCase):
         self.assertIn('id="workflow"',html)
         self.assertIn('id="lossChart"',html)
         self.assertIn(self.manager.token,html)
+        for field in ('patience','local_loss_fraction','skip_baseline'):
+            self.assertIn('id="'+field+'"',html)
         state=json.load(urllib.request.urlopen(self.base+'/api/state'))
         self.assertEqual(state['status']['status'],'idle')
         self.assertEqual(len(state['status']['stages']),9)
+
+    def post_action(self, data):
+        request=urllib.request.Request(self.base+'/api/action',data=json.dumps(data).encode(),
+            headers={'Content-Type':'application/json','X-SOC-Token':self.manager.token})
+        return json.load(urllib.request.urlopen(request))
+
+    def test_quality_train_from_http_exports_requested_policy(self):
+        from test_quality_training import prepared
+        source=Path(self.tmp.name)/'quality-data'; prepared(source)
+        target=Path(self.tmp.name)/'quality-run'
+        response=self.post_action({'action':'train','prepared':str(source),'run':str(target),
+            'epochs':'1','batch_size':'128','device':'cpu','checkpoint_seconds':'30',
+            'patience':'7','local_loss_fraction':'0.20','skip_baseline':'true'})
+        self.assertEqual(response['message'],'Job started')
+        process=self.manager.process
+        try:
+            process.wait(timeout=55)
+            self.assertEqual(process.returncode,0,self.manager.log_path.read_text(encoding='utf-8',errors='replace'))
+        finally:
+            if process.poll() is None:
+                process.terminate(); process.wait(timeout=10)
+        model=read_json(target/'model.json'); cfg=model['hyperparameters']
+        self.assertTrue(model['complete'])
+        self.assertEqual(cfg['local_loss_fraction'],.2)
+        self.assertEqual(cfg['patience'],7)
+        self.assertTrue(cfg['skip_baseline'])
+        self.assertIn('local_quality_check',read_json(target/'metrics.json'))
+        # Reloading the dashboard must keep typed settings, then selecting the
+        # run must restore its policy even after the form was changed.
+        restored=Manager(self.manager.root)
+        self.assertEqual(restored.config['local_loss_fraction'],.2)
+        response=self.post_action({'action':'select','run':str(target),
+            'local_loss_fraction':'0','patience':'1','skip_baseline':'false'})
+        self.assertEqual(response['config']['local_loss_fraction'],.2)
+        self.assertEqual(response['config']['patience'],7)
+        self.assertTrue(response['config']['skip_baseline'])
+
+    def test_invalid_quality_settings_do_not_start_worker(self):
+        cases=[{'local_loss_fraction':value} for value in ('nan','inf','-0.1','0.5',True)]
+        cases += [{'skip_baseline':'yes'}, {'patience':'0'}]
+        with mock.patch('soc_ai.dashboard.subprocess.Popen') as launch:
+            for bad in cases:
+                with self.subTest(bad=bad):
+                    with self.assertRaises(urllib.error.HTTPError) as error:
+                        self.post_action({'action':'train','local_loss_fraction':'0.2',
+                            'patience':'7','skip_baseline':'true',**bad})
+                    self.assertEqual(error.exception.code,400)
+            launch.assert_not_called()
+
+    def test_select_legacy_run_resets_quality_options(self):
+        run=Path(self.tmp.name)/'legacy'; run.mkdir()
+        write_json(run/'model.json',{'hyperparameters':{'prepared_path':'legacy-data','epochs':20}})
+        response=self.post_action({'action':'select','run':str(run),
+            'local_loss_fraction':'0.2','patience':'7','skip_baseline':'true'})
+        self.assertEqual(response['config']['local_loss_fraction'],0)
+        self.assertEqual(response['config']['patience'],5)
+        self.assertFalse(response['config']['skip_baseline'])
     def test_no_action_without_token(self):
         request=urllib.request.Request(self.base+'/api/action',data=b'{"action":"select"}',headers={'Content-Type':'application/json'})
         with self.assertRaises(urllib.error.HTTPError) as e: urllib.request.urlopen(request)

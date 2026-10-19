@@ -13,7 +13,7 @@ header small{font-size:12px;color:#9bb2cc;margin-top:9px}
 /* SOC-AI BRAND END */
 </style></head><body>
 <header><div class="soc-brand"><div class="soc-eyebrow">SOC LAB / MODEL WORKSPACE</div><h1>AI Dashboard</h1><div class="soc-authors">By Hải Đăng - Hồng Thái - Quang Duy</div><small>Huấn luyện · Checkpoint · Đánh giá · Xuất mô hình</small></div><span id="badge" class="status">Đang kết nối</span></header>
-<main><div class="banner">Mô hình thử nghiệm trên CICIDS2017. Nhãn đối chiếu còn tạm thời; điểm test nội bộ chưa chứng minh độ chính xác trong lab thực tế. Thực nghiệm lab và tương quan sự kiện là các bước dự kiến.</div>
+<main><div class="banner">Huấn luyện MLP trên dữ liệu đã chuẩn bị. Chế độ Quality kết hợp dữ liệu gốc và dữ liệu lab; kết quả test nội bộ cần được đối chiếu bằng các phiên lab độc lập trước khi chọn model chạy Live.</div>
 <div class="layout"><div>
 <section class="card"><h2>Cấu hình phiên làm việc</h2><div class="form">
 <label class="wide">File dữ liệu cohort (JSONL)<input class="path" id="cohort"></label>
@@ -21,6 +21,10 @@ header small{font-size:12px;color:#9bb2cc;margin-top:9px}
 <label class="wide">Thư mục run · để trống để tạo lượt mới theo thời gian<input class="path" id="run"></label>
 <label class="wide">Các run gần đây<select id="recent"><option value="">Chọn một run trước đó…</option></select></label>
 <label>Epochs<input id="epochs" type="number" min="1" value="20"></label><label>Batch size<input id="batch_size" type="number" min="1" value="2048"></label><label>Thiết bị tính toán<select id="device"><option>cuda</option><option>cpu</option></select></label><label>Chu kỳ lưu checkpoint (giây)<input id="checkpoint_seconds" type="number" min="1" value="30"></label>
+<label>Số epoch chờ cải thiện<input id="patience" type="number" min="1" max="1000" value="5"></label>
+<label>Tỷ trọng học dữ liệu lab<input id="local_loss_fraction" type="number" min="0" max="0.499999" step="any" value="0"></label>
+<label>Baseline tuyến tính<select id="skip_baseline"><option value="false">Train thêm để đối chiếu</option><option value="true">Bỏ qua</option></select></label>
+<p class="small wide">Quality: đặt tỷ trọng 0.20 cho dataset ghép dữ liệu gốc + local. Đặt 0 cho chế độ thường hoặc dataset hoàn toàn local. Tỷ trọng là phần loss học local, không phải tỷ lệ chia train/test. Baseline tuyến tính khác model MLP cũ dùng để so sánh candidate.</p>
 </div><div class="buttons"><button id="prepareButton" onclick="act('prepare')">1 · Chuẩn bị dữ liệu</button><button id="trainButton" class="primary" onclick="act('train')">2 · Bắt đầu train</button><button id="pauseButton" class="pause" onclick="act('pause')">Tạm dừng và lưu</button><button id="resumeButton" onclick="act('resume')">Tiếp tục từ checkpoint</button><button id="verifyButton" onclick="act('verify')">Kiểm tra mô hình đã xuất</button><button id="newButton" onclick="newRun()">Run mới</button></div>
 <p class="small" id="preparedInfo">Đang đọc trạng thái dữ liệu…</p><p class="small">Tiếp tục từ checkpoint sẽ khôi phục cấu hình, mô hình, optimizer, trạng thái ngẫu nhiên và vị trí batch. Đóng tab trình duyệt không dừng việc train.</p></section>
 <div class="stats"><div class="metric"><span>Epoch</span><strong id="epoch">—</strong></div><div class="metric"><span>Batch / epoch</span><strong id="batch">—</strong></div><div class="metric"><span>Train loss</span><strong id="loss">—</strong></div><div class="metric"><span>Validation macro F1</span><strong id="f1">—</strong></div></div>
@@ -31,7 +35,7 @@ header small{font-size:12px;color:#9bb2cc;margin-top:9px}
 <section class="card"><details><summary>Nhật ký xử lý (console)</summary><pre id="console"></pre></details></section>
 </div><aside><section class="card"><h2>Quy trình thực hiện</h2><div id="workflow"></div><p class="small">Train và validation lặp lại mỗi epoch. Các bước lab dự kiến chưa được triển khai.</p></section></aside></div></main><div id="toast" class="toast"></div>
 <script>
-const token='__TOKEN__';let initialized=false,lastGallery='',latest=null;const fields=['cohort','prepared','run','epochs','batch_size','device','checkpoint_seconds'];
+const token='__TOKEN__';let initialized=false,lastGallery='',latest=null;const fields=['cohort','prepared','run','epochs','batch_size','device','checkpoint_seconds','patience','local_loss_fraction','skip_baseline'];
 const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 const stateNames={idle:'Chờ thao tác',running:'Đang xử lý',completed:'Hoàn tất',paused:'Đã tạm dừng',failed:'Có lỗi',interrupted:'Bị gián đoạn',pending:'Chưa thực hiện',active:'Đang thực hiện',done:'Hoàn tất',planned:'Dự kiến'};

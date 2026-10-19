@@ -4,6 +4,7 @@ from collections import deque
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 import json
+import math
 import mimetypes
 import os
 from pathlib import Path
@@ -15,6 +16,10 @@ from urllib.parse import urlparse,parse_qs
 from .common import read_json,write_json
 from .fileio import read_bytes
 from .workflow import STAGES
+
+TRAINING_DEFAULTS = {'patience':5, 'local_loss_fraction':0.0, 'skip_baseline':False}
+CONFIG_FIELDS = ('cohort','prepared','run','epochs','batch_size','device',
+                 'checkpoint_seconds',*TRAINING_DEFAULTS)
 
 
 def optional_json(path,default=None):
@@ -41,7 +46,7 @@ class Manager:
         self.root=Path(root).resolve(); self.root.mkdir(parents=True,exist_ok=True)
         defaults={'cohort':str(self.root.parent/'dataset/normalized/CICIDS2017/experimental-cohort-20261011-184306/cohort.jsonl'),
                   'prepared':str(self.root/'prepared-v01'),'run':'','epochs':20,'batch_size':2048,
-                  'device':'cuda','checkpoint_seconds':30}
+                  'device':'cuda','checkpoint_seconds':30,**TRAINING_DEFAULTS}
         self.config={**defaults,**(optional_json(self.root/'dashboard-session.json',{}) or {})}
         self.process=None; self.job=None; self.lock=threading.Lock(); self.pending_pause=False
         self.log_path=self.root/'dashboard-console.log'; self.token=secrets.token_urlsafe(32)
@@ -84,7 +89,7 @@ class Manager:
                 if run.exists(): (run/'stop.request').write_text('pause requested',encoding='utf-8')
                 return {'message':'Pause requested. Wait for Paused / checkpoint saved before shutdown.'}
             if self.status()['busy']: raise ValueError('A job is running. Pause and wait before starting another job.')
-            for key in ('cohort','prepared','run','epochs','batch_size','device','checkpoint_seconds'):
+            for key in CONFIG_FIELDS:
                 if key in data: self.config[key]=data[key]
             if action in ('select','resume') and self.config['run']:
                 metadata=optional_json(Path(self.config['run'])/'model.json',{}) or {}
@@ -93,6 +98,8 @@ class Manager:
                     self.config['prepared']=cfg['prepared_path']
                     for k in ('epochs','batch_size','device','checkpoint_seconds'):
                         if k in cfg: self.config[k]=cfg[k]
+                    # Legacy runs must not inherit Quality settings from another run.
+                    for k,value in TRAINING_DEFAULTS.items(): self.config[k]=cfg.get(k,value)
             if action=='select':
                 write_json(self.root/'dashboard-session.json',self.config); return {'message':'Run selected','config':self.config}
             if action not in ('prepare','train','resume','verify'): raise ValueError('Unknown action')
@@ -102,12 +109,23 @@ class Manager:
                     '--output',str(target),'--experimental-labels']
             elif action=='train':
                 epochs=int(self.config['epochs']); batch=int(self.config['batch_size']); seconds=int(self.config['checkpoint_seconds'])
-                if not 1<=epochs<=1000 or not 1<=batch<=65536 or not 1<=seconds<=3600: raise ValueError('Training settings outside supported range')
+                patience=int(self.config['patience'])
+                if not 1<=epochs<=1000 or not 1<=batch<=65536 or not 1<=seconds<=3600 or not 1<=patience<=1000: raise ValueError('Training settings outside supported range')
+                if isinstance(self.config['local_loss_fraction'],bool): raise ValueError('Local loss fraction must be a number from 0 to less than 0.5')
+                fraction=float(self.config['local_loss_fraction'])
+                if not math.isfinite(fraction) or not 0<=fraction<.5: raise ValueError('Local loss fraction must be a number from 0 to less than 0.5')
+                skip=self.config['skip_baseline']
+                if isinstance(skip,str) and skip in ('true','false'): skip=skip=='true'
+                if not isinstance(skip,bool): raise ValueError('Skip baseline must be true or false')
+                self.config.update(patience=patience,local_loss_fraction=fraction,skip_baseline=skip)
                 if self.config['device'] not in ('cpu','cuda'): raise ValueError('Unknown device')
-                target=Path(self.config['run']) if self.config['run'] else self.root/'runs'/('mlp-v02-'+datetime.now().strftime('%Y%m%d-%H%M%S'))
+                prefix='mlp04-quality-' if fraction else 'mlp04-'
+                target=Path(self.config['run']) if self.config['run'] else self.root/'runs'/(prefix+datetime.now().strftime('%Y%m%d-%H%M%S'))
                 self.config['run']=str(target)
                 command+=['train','--prepared',str(self.config['prepared']),'--output',str(target),
-                    '--epochs',str(epochs),'--batch-size',str(batch),'--device',self.config['device'],'--checkpoint-seconds',str(seconds)]
+                    '--epochs',str(epochs),'--batch-size',str(batch),'--device',self.config['device'],'--checkpoint-seconds',str(seconds),
+                    '--patience',str(patience),'--local-loss-fraction',str(fraction)]
+                if skip: command+=['--skip-baseline']
             elif action=='resume':
                 target=Path(self.config['run']); command+=['train','--resume',str(target)]
                 if not (target/'checkpoints/latest.pt').exists(): raise ValueError('No resumable checkpoint in selected folder')

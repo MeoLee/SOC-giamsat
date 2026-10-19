@@ -4,6 +4,8 @@ Mở **Windows PowerShell trên máy vật lý** cho các lệnh Python/Docker d
 
 Ba đường sử dụng:
 
+Muốn thao tác bằng giao diện HTML, xem [Dashboard training Quality](TRAIN-DASHBOARD-VI.md).
+
 | Bạn đang có | Đường phù hợp |
 |---|---|
 | Source/model/cache Lab A hiện tại | Cài source cạnh bản cũ, verify model, thu/ghép local và train run mới khi cần. |
@@ -14,13 +16,13 @@ Ba đường sử dụng:
 
 ## 1. Cài source và Python
 
-Giữ `SOC-AI-v0.2`, `.venv`, `.venv-infer`, raw, runs và checkpoints hiện có. Lưu ZIP `SOC-AI-Lab-A-v0.4.1-Research-20261019.zip` tại `E:\SOC-Lab\AI`, kiểm tra SHA256 với file `.sha256` đi kèm, rồi:
+Giữ `SOC-AI-v0.2`, `.venv`, `.venv-infer`, raw, runs và checkpoints hiện có. Lưu ZIP `SOC-AI-Lab-A-v0.4.2-Research-20261019.zip` tại `E:\SOC-Lab\AI`, kiểm tra SHA256 với file `.sha256` đi kèm, rồi:
 
 ```powershell
 $aiRoot = 'E:\SOC-Lab\AI'
 $project = Join-Path $aiRoot 'SOC-AI-v0.4-research'
 if (Test-Path -LiteralPath $project) { throw 'Thư mục đã tồn tại; chọn thư mục mới để giữ bản hiện hành.' }
-Expand-Archive -LiteralPath (Join-Path $aiRoot 'SOC-AI-Lab-A-v0.4.1-Research-20261019.zip') -DestinationPath $aiRoot -ErrorAction Stop
+Expand-Archive -LiteralPath (Join-Path $aiRoot 'SOC-AI-Lab-A-v0.4.2-Research-20261019.zip') -DestinationPath $aiRoot -ErrorAction Stop
 Set-Location $project
 py -3.12 --version
 if ($LASTEXITCODE -ne 0) { throw 'Cài Python 3.12 chính thức rồi mở PowerShell mới.' }

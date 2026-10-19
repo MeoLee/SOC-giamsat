@@ -1,3 +1,12 @@
+# 0.4.2 dashboard Quality controls — 2026-10-19
+
+- Pass local-loss-fraction, patience and skip-baseline from the HTML form to the
+  CLI worker, validate settings and persist them in the dashboard session.
+- Restore run metadata when selecting/resuming; legacy runs retain legacy defaults.
+- Verify a real HTTP Train action through a CPU worker and exported Quality bundle.
+- Document Windows GUI training and provide a patch relative to 0.4.1.
+- No change to model weights, datasets, feature contract or training engine.
+
 # 0.4.1 packaging/test hotfix — 2026-10-19
 
 - Restore the dashboard HTML asset omitted from the original0.4 release ZIP.
