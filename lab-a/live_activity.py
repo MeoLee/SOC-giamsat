@@ -6,6 +6,7 @@ from pathlib import Path
 import time
 
 from wazuh_bridge import make_event
+from lab_risk import assessment, case_assessment
 
 
 def append(path, rows):
@@ -24,7 +25,8 @@ def safe(value):
 
 
 class Activities:
-    def __init__(self, folder, publisher=None, clock=time.monotonic):
+    def __init__(self, folder, publisher=None, clock=time.monotonic,
+                 publish_observations=False, summary_seconds=10):
         self.folder = Path(folder)
         self.publisher = publisher
         self.path = self.folder/'live-activities.jsonl'
@@ -36,6 +38,15 @@ class Activities:
         self.seen_events = set()
         self.case_revisions = {}
         self.raw_rows = []
+        self.publish_observations = publish_observations
+        self.summary_seconds = summary_seconds
+        self.sensor_counters = {}
+
+    def emit(self, row):
+        row['session_id'] = self.folder.name
+        append(self.path, [row])
+        if self.publisher:
+            self.publisher.enqueue(row)
 
     def flush_raw(self):
         append(self.path, self.raw_rows)
@@ -56,6 +67,8 @@ class Activities:
                 'model_weights_sha256': prediction.get('model_weights_sha256', ''),
                 'first_event_time': event.get('timestamp'), 'last_event_time': event.get('timestamp')}
         g = self.groups[key]
+        g['sensor_tcp_gap_flow_count'] = g.get('sensor_tcp_gap_flow_count', 0) + int(
+            bool(event.get('tcp', {}).get('ts_gap') or event.get('tcp', {}).get('tc_gap')))
         g['flow_count'] += 1
         g['last_event_time'] = event.get('timestamp')
         port = event.get('dest_port')
@@ -71,6 +84,30 @@ class Activities:
 
     def raw_event(self, event, source_file, source_container):
         kind = event.get('event_type')
+        if kind == 'stats':
+            stats = event.get('stats', {})
+            def counter(*keys):
+                value=stats
+                for key in keys:
+                    if not isinstance(value,dict): raise ValueError('Sensor stats must contain objects')
+                    value=value.get(key,{} if key!=keys[-1] else 0)
+                return value
+            counters = {'ipv4_truncated_packets':counter('decoder','event','ipv4','trunc_pkt'),
+                        'tcp_reassembly_gaps':counter('tcp','reassembly_gap'),
+                        'kernel_drops':counter('capture','kernel_drops')}
+            if any(type(v) is not int or v < 0 for v in counters.values()):
+                raise ValueError('Invalid sensor quality counters')
+            key = (source_file, source_container)
+            previous = self.sensor_counters.get(key)
+            self.sensor_counters[key] = counters
+            if previous is not None:
+                delta = {k:max(0,v-previous[k]) for k,v in counters.items()}
+                if any(delta.values()):
+                    self.emit(make_event('telemetry_warning', [self.folder.name, key, event.get('timestamp'), counters],
+                        **assessment(20, 'Sensor counters increased; inspect capture quality', 'telemetry_warning'),
+                        source_container=source_container, source_file=source_file,
+                        event_time=event.get('timestamp'), **delta))
+            return
         if kind not in ('alert', 'http', 'dns', 'tls', 'ssh', 'fileinfo', 'anomaly'):
             return
         # Store only observed application metadata; never claim decrypted content.
@@ -107,6 +144,15 @@ class Activities:
         if kind == 'alert':
             print('[SENSOR]', safe(row['event_time']), safe(row['source_ip']), '->', safe(row['target_ip']),
                   'port='+safe(row['target_port']), safe(observed), flush=True)
+            self.flush_raw()
+            self.emit(make_event('sensor_alert', [self.folder.name, source_file, source_container,
+                event.get('timestamp'), str(event.get('flow_id')), event.get('tx_id'),
+                event.get('src_ip'), event.get('src_port'), event.get('dest_ip'),
+                event.get('dest_port'), details],
+                **assessment(50, 'Suricata signature matched; severity is independent of model score'),
+                **{k:v for k,v in row.items() if k != 'details'},
+                signature_id=details['signature_id'], signature=details['signature'],
+                signature_severity=details['severity']))
 
     def correlation(self, engine):
         http_groups = {}
@@ -120,6 +166,12 @@ class Activities:
             print('[HTTP]', safe(src), '->', safe(dst), safe(method), safe(path),
                   'status='+str(status), 'requests='+str(count),
                   'indicators='+safe(','.join(sorted(indicators)) or 'none'), flush=True)
+            if self.publish_observations:
+                self.sequence += 1
+                self.emit(make_event('http_observation', [self.folder.name, 'http', self.sequence],
+                    **assessment(0, 'Observed HTTP transactions; status alone does not establish safety', 'observation'),
+                    source_ip=src, target_ip=dst, http_method=method, http_status=status,
+                    request_count=count, sample_request_target=path))
         # One compact console line per host/source/account/outcome per polling cycle.
         fresh = [e for eid, e in engine.events.items() if eid not in self.seen_events]
         groups = Counter()
@@ -129,6 +181,14 @@ class Activities:
             if e['kind'].startswith('auth.'):
                 groups[(e['kind'], e['target_host'], e['source_ip'], e['username'])] += 1
                 rows.append({'activity_type': e['kind'], **e})
+                if self.publish_observations:
+                    self.emit(make_event('auth_observation', [self.folder.name, 'auth', e['event_id']],
+                        **assessment(0 if e['kind']=='auth.success' else 15,
+                            'Single authentication outcome; not an attack-chain verdict', 'observation'),
+                        event_time=e['event_time'], activity_type=e['kind'],
+                        source_ip=e['source_ip'], source_port=e['source_port'],
+                        target_ip=e['target_ip'], target_host=e['target_host'],
+                        username=e['username'], evidence_ids=[e['event_id']] ))
         append(self.path, rows)
         for (kind, host, src, user), count in groups.items():
             print('[AUTH]', safe(src), '->', safe(host), 'user='+safe(user), safe(kind), 'count='+str(count), flush=True)
@@ -143,9 +203,17 @@ class Activities:
             row = make_event('correlation', [self.folder.name, case['case_id'], revision],
                 case_id=case['case_id'], case_status=case['status'], source_ip=case['source_ip'],
                 target_ip=case['target_ip'], target_host=case['target_host'], username=case['username'],
-                stages=' -> '.join(stages), evidence_ids=evidence[:32], evidence_count=len(evidence),
+                stages=' -> '.join(stages), evidence_ids=evidence[:8], evidence_count=len(evidence),
                 evidence_file=str(engine.snapshot), confirmed_compromise=False,
                 activity=case['explanation'])
+            details = case_assessment(case)
+            # Wazuh's JSON decoder does not support arrays of objects. Preserve
+            # the graph as a JSON string; full structured stages stay local.
+            graph = details.pop('attack_chain_graph')
+            for node in graph['nodes']:
+                node['evidence_ids'] = node['evidence_ids'][:2]
+            row.update(details, attack_chain_json=json.dumps(graph, separators=(',', ':')),
+                       event_time=case['last_seen'], session_id=self.folder.name)
             if case['status'] == 'possible_web_sqli':
                 row.update(detection_method='http_rule_evidence',
                     sample_request_target=case.get('sample_request_target'),
@@ -159,7 +227,7 @@ class Activities:
 
     def flush(self, force=False):
         self.flush_raw()
-        if not force and self.clock()-self.last_flush < 10:
+        if not force and self.clock()-self.last_flush < self.summary_seconds:
             return
         self.last_flush = self.clock()
         rows = []
@@ -168,6 +236,10 @@ class Activities:
             row = make_event('model_summary', [self.folder.name, 'summary', self.sequence], **g,
                 activity='Flow model prediction; uncalibrated score, not verified attack',
                 softmax_scores_calibrated=False, evidence_file=str(self.folder/'ai-predictions.jsonl'))
+            row.update(assessment(35 if g['decision']=='possible_attack' else 0,
+                'MLP operating decision; score_max is an uncalibrated model score',
+                'unverified_detection' if g['decision']=='possible_attack' else 'observation'),
+                session_id=self.folder.name)
             rows.append(row)
             print('[AI]', safe(g['source_ip']), '->', safe(g['target_ip']),
                   str(g['protocol'])+'/'+str(g['application']),
@@ -180,6 +252,6 @@ class Activities:
         append(self.path, rows)
         if self.publisher:
             for row in rows:
-                if row['decision'] == 'possible_attack':
+                if row['decision'] == 'possible_attack' or self.publish_observations:
                     self.publisher.enqueue(row)
         self.groups.clear()

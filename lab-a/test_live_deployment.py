@@ -45,7 +45,7 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(len({r['record_id'] for r in rows}), 2)
 
     def test_source_output_traversal_and_collision_rejected(self):
-        for output in ('../bad', '..\\bad', 'C:bad', 'checkpoint.json', 'ai-predictions.jsonl'):
+        for output in ('../bad', '..\\bad', 'C:bad', 'checkpoint.json', 'ai-predictions.jsonl', 'scenario-operation.json'):
             cfg = self.root/'config.json'
             cfg.write_text(json.dumps({'sources': [{'kind': 'eve', 'container': 's', 'path': '/eve', 'output': output}]}))
             with self.assertRaises(ValueError): load_config(cfg)

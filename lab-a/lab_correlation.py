@@ -258,6 +258,9 @@ def build_cases(events, config):
             cluster.append(e)
         if cluster:
             add_scan_case(cases, key, cluster)
+    from lab_risk import case_assessment
+    for case in cases.values():
+        case.update(case_assessment(case))
     return sorted(cases.values(), key=lambda c: (c['first_seen'], c['case_id']))
 
 

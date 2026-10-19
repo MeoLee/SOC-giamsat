@@ -28,7 +28,8 @@ def output_name(value):
                   *(f'lpt{i}' for i in range(1, 10))}:
         raise ValueError('Reserved Windows device filename')
     if key.startswith(('ai-', 'correlation-', 'context-', '.')) or key in (
-            'session.json', 'checkpoint.json', 'live-activities.jsonl', 'web-events.jsonl'):
+            'session.json', 'checkpoint.json', 'live-activities.jsonl', 'web-events.jsonl',
+            'scenario-operation.json'):
         raise ValueError('Reserved output filename')
     return key
 

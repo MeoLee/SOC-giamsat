@@ -1,6 +1,6 @@
 # Lab A 0.4 — bản nghiên cứu cải tiến
 
-**Bản đóng gói hiện hành: 0.4.2.** Đã bổ sung cấu hình Quality vào giao diện HTML; xem [train bằng dashboard](docs/TRAIN-DASHBOARD-VI.md). Nếu đã cài ZIP0.4 và gặp HTTP400/dashboard hoặc test offset10≠9, dùng [bản vá Windows](docs/WINDOWS-FIX-VI.md), không cài lại venv.
+**Bản đóng gói hiện hành: 0.4.3.** Có [Wazuh realtime, chấm điểm và kịch bản attack chain](docs/WAZUH-REALTIME-VI.md), cùng [train Quality bằng dashboard](docs/TRAIN-DASHBOARD-VI.md). Nếu đã cài ZIP0.4 và gặp HTTP400/dashboard hoặc test offset10≠9, dùng [bản vá Windows](docs/WINDOWS-FIX-VI.md), không cài lại venv.
 
 Giữ nền MLP24 của A, nâng độ tin cậy dữ liệu/huấn luyện/đánh giá và bổ sung context theo cửa sổ. Đây là source và quy trình có thể kiểm chứng, **không phải weights đã được chứng minh tốt hơn model đang chạy trên máy bạn**.
 
@@ -9,6 +9,7 @@ Giữ nền MLP24 của A, nâng độ tin cậy dữ liệu/huấn luyện/đá
 | Đọc quyết định thiết kế và nghiên cứu | [Thiết kế, bằng chứng và giới hạn](docs/RESEARCH-04-VI.md) |
 | Cài mới / nâng cấp / train lại từ cache / train từ dữ liệu mới | [Hướng dẫn cài đặt và train](docs/INSTALL-TRAIN-VI.md) |
 | Train Quality bằng giao diện HTML, biểu đồ và pause/resume | [Dashboard training](docs/TRAIN-DASHBOARD-VI.md) |
+| Đẩy hoạt động/cảnh báo lên Wazuh, risk và attack chain theo thời gian thực | [Wazuh realtime](docs/WAZUH-REALTIME-VI.md) |
 | Chạy kịch bản giả lập và các phép thử trên lab | [Kịch bản kiểm thử](docs/SCENARIOS-VI.md) |
 | So sánh model cũ với candidate trên cùng holdout | [Benchmark](docs/BENCHMARK-VI.md) |
 | Hiểu tín hiệu quét cổng / HTTP rate chạy shadow | [Context](docs/CONTEXT-VI.md) |

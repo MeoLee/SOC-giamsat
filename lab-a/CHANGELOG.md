@@ -1,3 +1,15 @@
+# 0.4.3 operational Wazuh realtime — 2026-10-19
+
+- Publish sensor signatures without waiting for completed-flow MLP inference;
+  optionally publish auth, HTTP and below-threshold flow observations.
+- Add explainable operational risk, evidence-linked chain graphs and separate
+  telemetry-counter warnings; preserve hypothesis/compromise boundaries.
+- Add manager alert/index-response trace tooling, bounded private-Docker lab
+  scenarios, a Windows Live helper and an installation/acceptance runbook.
+- Validate eleven bridge event types before manager restart; preserve private
+  persistent config backups and require the updated rule marker for publication.
+- No new model training, changed feature contract or automatic response.
+
 # 0.4.2 dashboard Quality controls — 2026-10-19
 
 - Pass local-loss-fraction, patience and skip-baseline from the HTML form to the

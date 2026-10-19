@@ -1,8 +1,8 @@
 """Install an additive manager-local JSON input and dedicated AI rules.
 
 Run on the Windows host using the inference environment. Configuration is
-validated before restarting Wazuh. On validation/restart failure the changed
-configuration is restored from memory. No persistent backup is created.
+validated before restarting Wazuh. A private persistent backup is kept, and on
+validation/restart failure the changed configuration is restored from memory.
 """
 import argparse
 import json
@@ -73,6 +73,13 @@ def install_remote(payload):
     log.touch(exist_ok=True); os.chown(log, 0, group); os.chmod(log, 0o640)
     ready = logdir/'bridge-ready.json'
     old_ready = ready.read_bytes() if ready.exists() else None
+    backup = Path('/var/ossec/backup')/('soc-ai-'+str(time.time_ns()))
+    backup.mkdir(parents=True,mode=0o700,exist_ok=False)
+    for name,data in [('ossec.conf',old_config),('soc_ai_bridge_rules.xml',old_rule),
+                      ('bridge-ready.json',old_ready)]:
+        if data is not None:
+            entry=backup/name; entry.write_bytes(data); os.chmod(entry,0o600)
+    print('CONFIG_BACKUP:',backup,flush=True)
     def write(path, data):
         stat = path.stat() if path.exists() else None
         fd, temp = tempfile.mkstemp(dir=path.parent, prefix='.soc-ai-')
@@ -102,18 +109,24 @@ def install_remote(payload):
         samples = [{'soc_ai_kind': 'connection_test'},
             {'soc_ai_kind': 'model_summary', 'decision': 'possible_attack'},
             *({'soc_ai_kind': 'correlation', 'case_status': status} for status in
-              ('possible_recon', 'possible_password_guessing', 'suspicious_login_sequence','possible_web_sqli'))]
+              ('possible_recon', 'possible_password_guessing', 'suspicious_login_sequence','possible_web_sqli')),
+            {'soc_ai_kind':'model_summary','decision':'below_alert_threshold'},
+            {'soc_ai_kind':'auth_observation','activity_type':'auth.success'},
+            {'soc_ai_kind':'sensor_alert','signature':'lab signature','risk_score':50},
+            {'soc_ai_kind':'http_observation','http_method':'GET','http_status':200,'request_count':1},
+            {'soc_ai_kind':'telemetry_warning','source_container':'lab-sensor',
+             'ipv4_truncated_packets':1,'tcp_reassembly_gaps':1,'kernel_drops':0}]
         lines = ''.join(json.dumps({'soc_ai_producer': 'soc-ai-live',
             'source_ip': '198.51.100.10', 'target_ip': '192.0.2.10', 'target_host': 'test-host',
             'username': 'test-user', 'flow_count': 1, 'predicted_label': 'PortScan', **s})+'\n' for s in samples)
         output = run(['/var/ossec/bin/wazuh-logtest'], input=lines.encode())
-        matched = re.findall(r"id:\s*'(11920[1-6])'", output)
-        if matched != [str(i) for i in range(119201, 119207)]:
-            raise RuntimeError('AI rules did not match all six expected IDs; configuration restored')
+        matched = re.findall(r"id:\s*'(1192\d{2})'", output)
+        if matched != [str(i) for i in range(119201, 119212)]:
+            raise RuntimeError('AI rules did not match all eleven expected IDs; configuration restored')
         restarted = True
         run(['/var/ossec/bin/wazuh-control', 'restart'])
         write(ready, json.dumps({'version': 'soc-ai-wazuh/0.1', 'log_path': LOCATION,
-            'installed_at_epoch': time.time(), 'rule_ids': list(range(119200, 119207))}).encode())
+            'installed_at_epoch': time.time(), 'rule_ids': list(range(119200, 119212))}).encode())
         print('WAZUH_BRIDGE_INSTALLED', flush=True)
     except BaseException:
         if changed:

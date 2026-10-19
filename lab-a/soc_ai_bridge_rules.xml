@@ -1,4 +1,4 @@
-<!-- SOC-AI MANAGED v0.4; separate from existing lab rules -->
+<!-- SOC-AI MANAGED v0.4.3; separate from existing lab rules -->
 <group name="soc_ai,">
   <rule id="119200" level="0">
     <decoded_as>json</decoded_as>
@@ -15,28 +15,28 @@
     <if_sid>119200</if_sid>
     <field name="soc_ai_kind">^model_summary$</field>
     <field name="decision">^possible_attack$</field>
-    <description>SOC AI prediction (unverified): $(predicted_label), $(source_ip) to $(target_ip), flows=$(flow_count).</description>
+    <description>SOC AI prediction (unverified): $(predicted_label), $(source_ip) to $(target_ip), flows=$(flow_count), priority=$(risk_score).</description>
     <group>soc_ai_model_prediction,</group>
   </rule>
   <rule id="119203" level="8">
     <if_sid>119200</if_sid>
     <field name="soc_ai_kind">^correlation$</field>
     <field name="case_status">^possible_recon$</field>
-    <description>SOC AI correlation: possible reconnaissance from $(source_ip) to $(target_ip).</description>
+    <description>SOC AI correlation: possible reconnaissance from $(source_ip) to $(target_ip), priority=$(risk_score).</description>
     <group>soc_ai_correlation,recon,</group>
   </rule>
   <rule id="119204" level="12">
     <if_sid>119200</if_sid>
     <field name="soc_ai_kind">^correlation$</field>
     <field name="case_status">^possible_password_guessing$</field>
-    <description>SOC AI correlation: repeated password failures from $(source_ip) for $(username) on $(target_host).</description>
+    <description>SOC AI correlation: repeated password failures from $(source_ip) for $(username) on $(target_host), priority=$(risk_score).</description>
     <group>soc_ai_correlation,authentication_failures,</group>
   </rule>
   <rule id="119205" level="13">
     <if_sid>119200</if_sid>
     <field name="soc_ai_kind">^correlation$</field>
     <field name="case_status">^suspicious_login_sequence$</field>
-    <description>SOC AI correlation: successful login after repeated password failures from $(source_ip) for $(username) on $(target_host); investigate.</description>
+    <description>SOC AI correlation: successful login after repeated password failures from $(source_ip) for $(username) on $(target_host); investigate. Priority=$(risk_score), chain=$(attack_chain).</description>
     <group>soc_ai_correlation,authentication_success,</group>
   </rule>
   <rule id="119206" level="8">
@@ -45,5 +45,36 @@
     <field name="case_status">^possible_web_sqli$</field>
     <description>SOC AI HTTP evidence: possible SQL injection from $(source_ip) to $(target_host). Exploitation success is not proven.</description>
     <group>soc_ai_correlation,web,sql_injection,</group>
+  </rule>
+  <rule id="119207" level="3">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^model_summary$</field>
+    <field name="decision" type="pcre2">^(below_alert_threshold|out_of_training_scope)$</field>
+    <description>SOC AI flow observation: $(predicted_label), decision=$(decision), $(source_ip) to $(target_ip).</description>
+    <group>soc_ai_observation,</group>
+  </rule>
+  <rule id="119208" level="3">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^auth_observation$</field>
+    <description>SOC AI auth observation: $(activity_type), user=$(username), source=$(source_ip), host=$(target_host).</description>
+    <group>soc_ai_observation,authentication,</group>
+  </rule>
+  <rule id="119209" level="8">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^sensor_alert$</field>
+    <description>SOC AI sensor evidence: $(signature), $(source_ip) to $(target_ip), priority=$(risk_score).</description>
+    <group>soc_ai_sensor,</group>
+  </rule>
+  <rule id="119210" level="3">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^http_observation$</field>
+    <description>SOC AI HTTP observation: $(http_method), status=$(http_status), requests=$(request_count), $(source_ip) to $(target_ip).</description>
+    <group>soc_ai_observation,web,</group>
+  </rule>
+  <rule id="119211" level="7">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^telemetry_warning$</field>
+    <description>SOC AI sensor quality: $(source_container), truncated=$(ipv4_truncated_packets), stream gaps=$(tcp_reassembly_gaps), drops=$(kernel_drops).</description>
+    <group>soc_ai_telemetry_quality,</group>
   </rule>
 </group>

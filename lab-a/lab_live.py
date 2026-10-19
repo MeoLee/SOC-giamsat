@@ -153,7 +153,9 @@ class LiveCollector(Collector):
         self.observer = FlowObserver(self.folder, predictor,
                                     None if args.all_flows else args.endpoints)
         from live_activity import Activities
-        self.activities = Activities(self.folder, self.publisher)
+        self.activities = Activities(self.folder, self.publisher,
+            publish_observations=getattr(args, 'publish_observations', False),
+            summary_seconds=getattr(args, 'summary_seconds', 10))
         self.observer.activities = self.activities
         self.eve_sources = [(s['output'], s['container']) for s in getattr(args, 'runtime', {}).get('sources', []) if s['kind'] == 'eve'] or [('suricata-eve.jsonl', 'ubuntu-endpoint')]
         self.context = None
@@ -196,7 +198,7 @@ class LiveCollector(Collector):
             self.correlator.write(correlation_status, self.state['status'])
         report = {
             'version': 'soc-live-observer/0.4', 'status': status,
-            'software_version': '0.4.0-research',
+            'software_version': '0.4.3-research',
             'complete': status == 'completed', 'mode': 'observe',
             'started_at': self.live_started, 'updated_at': now(),
             'model_directory': self.observer.model_path,
@@ -218,6 +220,7 @@ class LiveCollector(Collector):
             'automatic_response': False,
             'sources': self.state['sources'],
             'wazuh_publication': {'enabled': self.publisher is not None,
+                'observations_enabled': self.activities.publish_observations,
                 'pending': self.publisher.pending if self.publisher else 0,
                 'last_error': self.publisher.last_error if self.publisher else None,
                 'ack_means': 'appended to manager log; indexing must be verified separately'},
@@ -276,6 +279,10 @@ def parser():
     scope.add_argument('--all-flows', action='store_true', help='Compatibility flag; all flows is already the default.')
     p.add_argument('--config', type=Path, help='Sources, asset identities and correlation configuration')
     p.add_argument('--publish-wazuh', action='store_true', help='Send summaries after setup_wazuh.py has installed rules')
+    p.add_argument('--publish-observations', action='store_true',
+                   help='Also send normal/auth/HTTP observations as informational Wazuh events')
+    p.add_argument('--summary-seconds', type=float, default=10,
+                   help='Model summary interval; completed-flow availability still depends on sensor timeout')
     p.add_argument('--no-correlation', action='store_true')
     context = p.add_mutually_exclusive_group()
     context.add_argument('--context', dest='context', action='store_true', default=None,
@@ -293,6 +300,11 @@ def main():
     show_header()
     if a.interval < .1 or a.grace < 0 or a.heartbeat_seconds < 0:
         p.error('interval >= 0.1, grace >= 0 and heartbeat-seconds >= 0 required')
+    import math
+    if not math.isfinite(a.summary_seconds) or a.summary_seconds < .1:
+        p.error('summary-seconds must be finite and >= 0.1')
+    if a.publish_observations and not a.publish_wazuh:
+        p.error('--publish-observations requires --publish-wazuh')
     a.resume = None
     a.from_start = False
     a.docker_command = 'docker'
@@ -316,6 +328,8 @@ def main():
             ready = json.loads(check.stdout)
             if ready.get('version') != 'soc-ai-wazuh/0.1':
                 raise ValueError('Unsupported Wazuh bridge installation')
+            if not set(range(119201, 119212)).issubset(ready.get('rule_ids', [])):
+                raise ValueError('Update bridge rules with setup_wazuh.py before publishing this release')
         sensors = {s['container'] for s in a.runtime['sources'] if s['kind'] == 'eve'}
         for sensor in sensors:
             check = subprocess.run(['docker', 'exec', sensor, 'pgrep', '-f',
