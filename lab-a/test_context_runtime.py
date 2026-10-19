@@ -45,16 +45,25 @@ class ContextRuntimeTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(raw).hexdigest(), ref['raw_sha256'])
 
     def test_invalid_json_and_detector_rejection_are_visible_and_referenced(self):
-        journal = ContextJournal(self.root, self.sources)
-        event = flow(); del event['flow']['bytes_toclient']
-        (self.root / 'eve.jsonl').write_text('not json\n' + json.dumps(event) + '\n')
-        journal.consume(); result = journal.write_status('completed')
-        self.assertFalse(result['complete']); self.assertTrue(result['quality']['incomplete'])
-        self.assertEqual(result['runtime_counts']['invalid_input_records'], 1)
-        self.assertEqual(result['runtime_counts']['rejected_context_records'], 1)
-        errors = [json.loads(line) for line in journal.errors.read_text().splitlines()]
-        self.assertEqual(len(errors), 2)
-        self.assertEqual(errors[1]['byte_offset'], len('not json\n'))
+        # Byte offsets refer to physical raw bytes: Windows text writes may use
+        # CRLF. Exercise both encodings without relying on the host's newline.
+        for ending in (b'\n', b'\r\n'):
+            with self.subTest(line_ending=repr(ending)):
+                directory = self.root / ('crlf' if ending == b'\r\n' else 'lf')
+                directory.mkdir()
+                for source in self.sources:
+                    (directory / source['output']).touch()
+                journal = ContextJournal(directory, self.sources)
+                event = flow(); del event['flow']['bytes_toclient']
+                first = b'not json' + ending
+                (directory / 'eve.jsonl').write_bytes(first + json.dumps(event).encode('utf-8') + ending)
+                journal.consume(); result = journal.write_status('completed')
+                self.assertFalse(result['complete']); self.assertTrue(result['quality']['incomplete'])
+                self.assertEqual(result['runtime_counts']['invalid_input_records'], 1)
+                self.assertEqual(result['runtime_counts']['rejected_context_records'], 1)
+                errors = [json.loads(line) for line in journal.errors.read_text().splitlines()]
+                self.assertEqual(len(errors), 2)
+                self.assertEqual(errors[1]['byte_offset'], len(first))
 
     def test_disabled_http_is_not_consumed_or_treated_as_model_coverage(self):
         journal = ContextJournal(self.root, self.sources)

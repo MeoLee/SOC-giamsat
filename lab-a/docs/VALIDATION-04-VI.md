@@ -1,5 +1,7 @@
 # Kiểm chứng Lab A 0.4 — 19/10/2026
 
+**Đính chính bản phát hành:** các kết quả ban đầu dưới đây chạy trên source checkout; ZIP0.4 thiếu dashboard HTML và test offset chưa tương thích CRLF. Xem [nguyên nhân và sửa0.4.1](WINDOWS-FIX-VI.md). Bản sửa được kiểm tra lại trên ZIP giải nén; chưa xác nhận317/317 trên Windows thật.
+
 Đã chạy trên Linux/Python3.12, bằng cả venv cloud đang có và **venv mới độc lập do Setup-AI.ps1 thực sự cài**. Dependency trực tiếp: torch2.11.0+cpu, numpy2.3.5, scikit-learn1.8.0, matplotlib3.10.8. Đây là kiểm chứng source/pipeline, không phải benchmark model thật trên Lab A.
 
 | Kiểm tra | Kết quả |

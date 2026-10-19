@@ -1,3 +1,11 @@
+# 0.4.1 packaging/test hotfix — 2026-10-19
+
+- Restore the dashboard HTML asset omitted from the original0.4 release ZIP.
+- Make context byte-offset regression test exercise explicit LF and CRLF bytes.
+- Package all tracked source assets, require dashboard HTML, and run the complete
+  suite from extracted full and repaired ZIPs before releasing.
+- No model/training/inference policy, feature contract, data or environment change.
+
 # 0.4.0-research — 2026-10-19
 
 - Add independently evidenced local-session preparation and scoped SSH labeling
