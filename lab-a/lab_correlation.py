@@ -302,6 +302,8 @@ class Correlator:
                 raise ValueError('Invalid correlation configuration: ' + key)
         if not 2<=self.config['recon_port_threshold']<=65536 or self.config['recon_port_window_seconds']>3600:
             raise ValueError('Invalid reconnaissance port/window configuration')
+        from lab_campaign import validate
+        self.config = validate(self.config)
         self.config['protected_ip'] = str(ipaddress.ip_address(self.config['protected_ip']))
         from live_config import validated_assets, output_name
         if 'assets' in self.config:
@@ -317,6 +319,7 @@ class Correlator:
         self.counts = Counter()
         self.events = {}
         self.cases = []
+        self.chains = []
         self.deferred = False
         self.buffered_events = []
         self.buffered_errors = []
@@ -371,8 +374,14 @@ class Correlator:
                 self.web_activity.append(web)
                 if self.deferred: self.buffered_web.append(web)
                 else: append(self.web_log,[web])
+                if self.config.get('attack_chain_enabled'):
+                    web['http_origin'] = self.config.get('source_origins',{}).get(source,{}).get('source_container','')+'|'+source
                 e = sql_evidence(web)
                 if e: e.pop('source_ref',None)
+                elif self.config.get('attack_chain_enabled'):
+                    e = {k:web[k] for k in ('event_time','available_time','source_ip','source_port','target_ip',
+                        'target_host','destination_port','http_status','duration_us','evidence_provider','http_origin')}
+                    e.update(kind='web.request', http_record_id=web['record_id'])
             else:
                 e = normalize_line(source, raw, self.config)
         except (ValueError, KeyError, TypeError, OverflowError) as exc:
@@ -434,6 +443,8 @@ class Correlator:
             # Rebuild from event time, so delayed/out-of-order source delivery
             # yields the same final cases as sorted offline replay.
             self.cases = build_cases(list(self.events.values()), self.config)
+            from lab_campaign import build_chains
+            self.chains = build_chains(list(self.events.values()), self.cases, self.config)
             self.write('running')
         return more
 
@@ -444,6 +455,7 @@ class Correlator:
             'source_directory': str(self.source_directory), 'capture_status': capture_status,
             'counts': dict(self.counts), 'unique_events': len(self.events),
             'case_count': len(self.cases), 'cases': self.cases,
+            'chain_count':len(self.chains), 'chains':self.chains,
             'unfinished_source_lines': [n for n, tail in self.pending.items() if tail],
             'policy': {'mlp_prediction_alone_creates_chain': False,
                 'same_host_source_and_account_for_auth': True,

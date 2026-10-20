@@ -198,7 +198,7 @@ class LiveCollector(Collector):
             self.correlator.write(correlation_status, self.state['status'])
         report = {
             'version': 'soc-live-observer/0.4', 'status': status,
-            'software_version': '0.4.6-research',
+            'software_version': '0.4.8-research',
             'recon_policy': 'distinct_tcp_destination_ports/0.1',
             'complete': status == 'completed', 'mode': 'observe',
             'started_at': self.live_started, 'updated_at': now(),
@@ -211,6 +211,7 @@ class LiveCollector(Collector):
             'capture_gaps': self.state['gaps'], 'error': error,
             'correlation_implemented': self.correlator is not None,
             'correlation_case_count': len(self.correlator.cases) if self.correlator else 0,
+            'attack_chain_count': len(self.correlator.chains) if self.correlator else 0,
             'context_shadow': {'enabled': self.context is not None,
                 'signal_count': len(context_state['signals']) if context_state else 0,
                 'quality': context_state['quality'] if context_state else None,

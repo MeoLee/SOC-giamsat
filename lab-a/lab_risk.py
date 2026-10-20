@@ -7,6 +7,9 @@ POLICY = 'soc-operational-risk/0.1'
 
 # ATT&CK candidates from observed evidence, not inferred decrypted SSH content.
 STAGE_LABELS = {
+    'observed_auth_failures': ('Authentication failures (context)', None),
+    'http_request_pressure': ('High HTTP request volume', None),
+    'possible_http_dos': ('HTTP pressure with service degradation', 'T1499'),
     'possible_recon': ('Network service scanning', 'T1046'),
     'repeated_auth_failures': ('Password guessing', 'T1110.001'),
     'auth_success_after_failures': ('Login after password guessing', 'T1078'),

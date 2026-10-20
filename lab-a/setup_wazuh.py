@@ -115,18 +115,21 @@ def install_remote(payload):
             {'soc_ai_kind':'sensor_alert','signature':'lab signature','risk_score':50},
             {'soc_ai_kind':'http_observation','http_method':'GET','http_status':200,'request_count':1},
             {'soc_ai_kind':'telemetry_warning','source_container':'lab-sensor',
-             'ipv4_truncated_packets':1,'tcp_reassembly_gaps':1,'kernel_drops':0}]
+             'ipv4_truncated_packets':1,'tcp_reassembly_gaps':1,'kernel_drops':0},
+            {'soc_ai_kind':'attack_chain','risk_level':'medium'},
+            {'soc_ai_kind':'chain_stage','stage_name':'possible_recon'},
+            {'soc_ai_kind':'attack_chain','risk_level':'high'}]
         lines = ''.join(json.dumps({'soc_ai_producer': 'soc-ai-live',
             'source_ip': '198.51.100.10', 'target_ip': '192.0.2.10', 'target_host': 'test-host',
             'username': 'test-user', 'flow_count': 1, 'predicted_label': 'PortScan', **s})+'\n' for s in samples)
         output = run(['/var/ossec/bin/wazuh-logtest'], input=lines.encode())
         matched = re.findall(r"id:\s*'(1192\d{2})'", output)
-        if matched != [str(i) for i in range(119201, 119212)]:
-            raise RuntimeError('AI rules did not match all eleven expected IDs; configuration restored')
+        if matched != [str(i) for i in range(119201, 119215)]:
+            raise RuntimeError('AI rules did not match all fourteen expected IDs; configuration restored')
         restarted = True
         run(['/var/ossec/bin/wazuh-control', 'restart'])
         write(ready, json.dumps({'version': 'soc-ai-wazuh/0.1', 'log_path': LOCATION,
-            'installed_at_epoch': time.time(), 'rule_ids': list(range(119200, 119212))}).encode())
+            'installed_at_epoch': time.time(), 'rule_ids': list(range(119200, 119215))}).encode())
         print('WAZUH_BRIDGE_INSTALLED', flush=True)
     except BaseException:
         if changed:

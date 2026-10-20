@@ -91,6 +91,8 @@ def load_config(path=None):
                 'endpoint_window_seconds'):
         if key in settings and (type(settings[key]) is not int or settings[key] < 1):
             raise ValueError('Invalid correlation configuration: ' + key)
+    from lab_campaign import validate
+    settings = validate(settings)
     correlation = {**settings, 'all_agents': True,
                    'assets': validated_assets(data.get('assets', [])),
                    'source_kinds': {s['output']: s['kind'] for s in sources},

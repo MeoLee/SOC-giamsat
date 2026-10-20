@@ -158,12 +158,22 @@ def endpoint_outcomes(capture, operator):
             'general_endpoint_audit_coverage':False, 'confirmed_compromise':False}
 
 
+def rule_expectations(operator, counts):
+    expected=operator['expected_rule_ids']
+    groups=operator.get('expected_rule_id_groups',[])
+    return {'expected_rule_ids':expected,
+            'missing_expected_rule_ids':[i for i in expected if i not in counts],
+            'expected_rule_id_groups':groups,
+            'missing_expected_rule_id_groups':[g for g in groups if not any(i in counts for i in g)]}
+
+
 def recon_coverage(capture,operator):
     """Normalized, deduplicated SYN evidence in the operator's actual scope."""
     from lab_recon import instant, scan_evidence, canonical_flow_id
     path=capture/'correlation-events.jsonl'
     scenario=operator['scenario']
     minimum={'normal-http':12,'single-port':24,'port-scan':32,'chain':32,'chain-extended':32,
+             'chain-sqli':34,'chain-bruteforce':34,'chain-dos':34,'chain-mixed':34,
              'normal-ssh':5,'ssh-negative':2,'ssh-burst':8,'ssh-success':1,'web-sqli':1}.get(scenario)
     if scenario=='http-burst':minimum=operator.get('http_requests')
     events={};event_ids=set();invalid=0
@@ -239,14 +249,12 @@ def main():
             if operator['capture_session_id']!=capture['session_id']:
                 raise ValueError('Operator/capture session mismatch')
             report['scenario']=operator['scenario']
-            report['expected_rule_ids']=operator['expected_rule_ids']
-            report['missing_expected_rule_ids']=[i for i in operator['expected_rule_ids']
-                                                if i not in report['alert_rule_counts']]
+            report.update(rule_expectations(operator,report['alert_rule_counts']))
             report['expected_absent_rule_ids']=operator.get('expected_absent_rule_ids',[])
             report['unexpected_rule_ids']=[i for i in report['expected_absent_rule_ids']
                                            if i in report['alert_rule_counts']]
             report['recon_observation_coverage']=recon_coverage(a.capture,operator)
-            if 'ssh' in operator['scenario'] or operator['scenario'] in ('chain','chain-extended'):
+            if 'ssh' in operator['scenario'] or operator['scenario'] in ('chain','chain-extended','chain-bruteforce','chain-mixed'):
                 report['raw_auth_outcomes']=auth_outcomes(a.capture,operator)
             if operator['scenario']=='chain-extended':
                 report['endpoint_outcomes']=endpoint_outcomes(a.capture,operator)
@@ -255,6 +263,10 @@ def main():
             if report['expected_absent_rule_ids']:
                 report['negative_result_coverage_complete'] &= report['recon_observation_coverage']['coverage_sufficient']
         code=0 if alerts else 2
+        if a.operator and operator.get('schema_version')=='soc-chain-scenario/0.2':
+            if (not capture['closed'] or not operator['complete'] or result['tail_limited']
+                    or report['missing_expected_rule_ids'] or report['missing_expected_rule_id_groups']):
+                code=2
         if a.operator and report.get('scenario')=='chain-extended':
             if (not capture['closed'] or report['missing_expected_rule_ids']
                     or not report['endpoint_outcomes']['five_stage_chain_verified']):

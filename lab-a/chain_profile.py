@@ -12,6 +12,15 @@ READER_ID = 'soc-ai-chain-profile-reader-v1'
 # Display names, evidence requirements and follow-up hypotheses are curated.
 # ATT&CK does not prescribe a mandatory technique order or predict the future.
 STEPS = [
+    {'key':'observed_auth_failures','label':'Các lần sai mật khẩu — ngữ cảnh','technique':'unmapped',
+     'meaning':'Có failures sau scan, nhưng chưa đạt điều kiện burst theo account/cửa sổ. Không gán brute force hoặc tăng điểm chỉ từ những failure rời.',
+     'requirement':'Đối chiếu auth.log, số failures, thời gian và lỗi SSH reset/lockout trong operator.json.'},
+    {'key':'http_request_pressure','label':'Lưu lượng HTTP vượt ngưỡng','technique':'unmapped',
+     'meaning':'Số request Apache vượt ngưỡng theo nguồn, đúng host/IP/service. Chưa đủ bằng chứng DoS hoặc suy giảm dịch vụ.',
+     'requirement':'Đối chiếu request count/window, log server, baseline và lỗi/latency; loại trừ load test hợp lệ.'},
+    {'key':'possible_http_dos','label':'Áp lực HTTP kèm suy giảm dịch vụ','technique':'T1499',
+     'meaning':'Rate vượt ngưỡng kèm tăng 5xx hoặc request chậm so với baseline trước đó. Đây là nghi vấn DoS; chưa chứng minh nguyên nhân hoặc ý đồ.',
+     'requirement':'Kiểm tra baseline, 5xx, latency và tài nguyên/service health độc lập; chưa xác nhận outage hay DDoS.'},
     {'key': 'possible_recon', 'label': 'Quét cổng / khám phá dịch vụ', 'technique': 'T1046',
      'meaning': 'Nhiều cổng đích được truy cập trong cửa sổ phát hiện. Chưa chứng minh đăng nhập hoặc khai thác thành công.',
      'requirement': 'Đối chiếu IP nguồn/đích, số cổng khác nhau, ngưỡng và thời gian; loại trừ máy quét được phép.'},
@@ -32,6 +41,12 @@ STEPS = [
      'requirement': 'Đọc request, rule, log ứng dụng và database; kiểm tra thay đổi dữ liệu hoặc lỗi truy vấn có liên quan.'},
 ]
 FOLLOW_UP = [
+    {'after':'observed_auth_failures','label':'Giả thuyết: thử tiếp, ngừng thử hoặc kết nối bị chặn',
+     'detail':'Đối chiếu auth server và SSH policy; chỉ nâng thành password guessing khi đủ ngưỡng trong cửa sổ. Reset không phải auth failure.'},
+    {'after':'http_request_pressure','label':'Giả thuyết: ảnh hưởng khả dụng nếu tải tiếp tục tăng',
+     'detail':'Theo dõi 5xx, latency, service health và tài nguyên so với baseline. Rate cao chưa đủ tạo nhãn DoS.'},
+    {'after':'possible_http_dos','label':'Giả thuyết: tiếp tục suy giảm dịch vụ hoặc phục hồi',
+     'detail':'Đối chiếu health checks và tài nguyên. Tìm nguyên nhân khác như lỗi ứng dụng; không tự gán DDoS từ một nguồn.'},
     {'after': 'possible_recon', 'label': 'Giả thuyết: thử thông tin đăng nhập hoặc dò lỗ hổng dịch vụ',
      'detail': 'Theo dõi password failures (T1110.001) và request khai thác. Cần log server đủ ngưỡng hoặc bằng chứng ứng dụng; một port scan không xác nhận các hành vi này.'},
     {'after': 'repeated_auth_failures', 'label': 'Giả thuyết: tiếp tục thử mật khẩu hoặc đăng nhập thành công',

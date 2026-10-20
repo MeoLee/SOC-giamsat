@@ -1,5 +1,13 @@
 # Tải gói
 
+- **[0.4.8 — Unified Attack Chains, nâng thẳng từ 0.4.6](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.8-Unified-Chains-20261020.zip)**
+- [Hướng dẫn cài, một dashboard và kịch bản](https://github.com/MeoLee/SOC-giamsat/blob/main/lab-a/docs/ATTACK-CHAINS-048-VI.md)
+
+- [Full source 0.4.8 — dùng khi cần source đầy đủ](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.8-Research-20261020.zip)
+- [SHA256 gói cập nhật tích lũy](SOC-AI-Lab-A-v0.4.8-Unified-Chains-20261020.zip.sha256)
+
+Các bản dưới đây được lưu làm lịch sử; đang dùng 0.4.8 thì không import dashboard cũ.
+
 - **[0.4.7 — Hồ sơ Chain trong Wazuh, tiếng Việt, bấm Chain ID](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.7-Chain-Profile-VI-20261020.zip)**
 - [File Dashboard đầy đủ 9 objects — import trực tiếp](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/soc-ai-chain-profile-v0.4.7.ndjson)
 - [Full source 0.4.7](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.7-Research-20261020.zip)

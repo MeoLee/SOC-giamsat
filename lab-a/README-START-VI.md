@@ -1,12 +1,11 @@
 # Lab A 0.4 — bản nghiên cứu cải tiến
 
-Nếu Live dừng ở nguồn endpoint mới với `Log source is not a regular file`,
-xem [bản sửa Doctor cho log rỗng](docs/DOCTOR-EMPTY-LOG-FIX-VI.md).
+**Bản hiện hành: 0.4.8.** Bắt đầu tại [hướng dẫn một dashboard Attack Chain,
+scan → brute force/HTTP pressure/SQLi và cách nâng trực tiếp](docs/ATTACK-CHAINS-048-VI.md).
+Không cần cài 0.4.7 trước, không train lại. Chỉ import dashboard mới nêu trong
+hướng dẫn này; các tài liệu bên dưới thuộc những bản trước.
 
-Đã có [bản sửa lỗi shard khi đọc index cũ](docs/CHAIN-SHARD-FIX-VI.md) cho Chain
-Investigation; dùng ZIP 0.4.6 có đuôi Shard-Fix và file repair gồm hai visualization.
-
-**Bản đóng gói hiện hành: 0.4.7.** [Bấm Chain ID để mở Hồ sơ Chain trong Wazuh, nội dung tiếng Việt và giả thuyết bước tiếp theo](docs/CHAIN-PROFILE-VI.md). Import một file đầy đủ 9 objects; không cần train lại hoặc restart. Có [Chain Investigation, bằng chứng từng bước và kịch bản năm bước](docs/CHAIN-INVESTIGATION-VI.md), [bảng Attack Chain Detail và scoring trên Wazuh](docs/CHAIN-DASHBOARD-VI.md), [sửa SYN/recon và cài rule](docs/RECON-FIX-VI.md), [Wazuh realtime](docs/WAZUH-REALTIME-VI.md), cùng [train Quality bằng dashboard](docs/TRAIN-DASHBOARD-VI.md). Giữ model và venv hiện có. Dashboard chi tiết import riêng, giữ bảng 0.4.5; hai hành động endpoint cần cài probe có kiểm soát, không phải audit cho mọi lệnh. Không phải train lại.
+Tài liệu giao diện 0.4.7 (bản trước): [Bấm Chain ID để mở Hồ sơ Chain trong Wazuh, nội dung tiếng Việt và giả thuyết bước tiếp theo](docs/CHAIN-PROFILE-VI.md). Import một file đầy đủ 9 objects; không cần train lại hoặc restart. Có [Chain Investigation, bằng chứng từng bước và kịch bản năm bước](docs/CHAIN-INVESTIGATION-VI.md), [bảng Attack Chain Detail và scoring trên Wazuh](docs/CHAIN-DASHBOARD-VI.md), [sửa SYN/recon và cài rule](docs/RECON-FIX-VI.md), [Wazuh realtime](docs/WAZUH-REALTIME-VI.md), cùng [train Quality bằng dashboard](docs/TRAIN-DASHBOARD-VI.md). Giữ model và venv hiện có. Dashboard chi tiết import riêng, giữ bảng 0.4.5; hai hành động endpoint cần cài probe có kiểm soát, không phải audit cho mọi lệnh. Không phải train lại.
 
 Gói gồm sửa bộ cài hai EVE output và flow ID có đuôi `.000000`. Xem [kết quả HTTP burst thật](docs/HTTP-BURST-REVIEW-20261020-VI.md); model false positive được ghi nhận riêng. Nếu đã cài ZIP0.4 và gặp HTTP400/dashboard hoặc test offset10≠9, xem [bản vá Windows](docs/WINDOWS-FIX-VI.md).
 

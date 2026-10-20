@@ -20,7 +20,11 @@ REQUIRED = {'soc_ai/web/dashboard.html', 'soc_ai/predict.py', 'soc_ai/train.py',
             'dashboards/soc-ai-chain-investigation.ndjson',
             'dashboards/soc-ai-chain-investigation-shard-fix.ndjson',
             'endpoint_probe.py', 'lab_endpoint.py', 'lab_transfer_server.py',
-            'setup_chain_telemetry.py', 'chain_exercise.py', 'test_lab_endpoint.py'}
+            'setup_chain_telemetry.py', 'chain_exercise.py', 'test_lab_endpoint.py',
+            'lab_campaign.py', 'bounded_http_load.py', 'chain_scenarios.py', 'chain_trace.py',
+            'chain_unified.py', 'setup_attack_chains.py', 'manage_chain_dashboards.py',
+            'test_lab_campaign.py', 'test_chain_unified.py',
+            'docs/ATTACK-CHAINS-048-VI.md', 'docs/validation-048.json', 'dashboards/soc-ai-attack-chain-unified.ndjson'}
 
 
 def tracked_source(repo):

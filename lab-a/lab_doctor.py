@@ -74,6 +74,8 @@ def diagnose(config_path, model=None, runtime=False, bridge=False, runner=None):
                                           '/var/ossec/logs/soc-ai/bridge-ready.json']))
                 if not isinstance(ready, dict) or ready.get('version') != 'soc-ai-wazuh/0.1':
                     raise ValueError('Unsupported bridge installation')
+                if config['correlation'].get('attack_chain_enabled') and not {119212,119213,119214} <= set(ready.get('rule_ids',[])):
+                    raise ValueError('Install the 0.4.8 bridge rules before starting chain Live: python setup_wazuh.py --manager '+config['wazuh_manager'])
                 return {'installation_version': ready['version'],
                         'append_alert_index_delivery_established': False}
             check('bridge_installation_marker', bridge_ready)

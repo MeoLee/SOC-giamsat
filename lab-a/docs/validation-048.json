@@ -1,0 +1,108 @@
+{
+  "release": "0.4.8",
+  "date": "2026-10-20",
+  "scope": "Isolated fixtures and native validation; not an end-to-end run on the user Windows lab.",
+  "unit_and_integration_tests": {
+    "run": 398,
+    "failed": 0,
+    "skipped": 2,
+    "skip_reason": "Windows filesystem integration tests require Windows"
+  },
+  "native_dashboard": {
+    "isolated_fixture_validation": true,
+    "real_windows_lab_verified": false,
+    "first_import_count": 5,
+    "repeat_import_count": 5,
+    "auto_refresh_root_context_mixed": {
+      "stage_counts": [
+        1,
+        2,
+        4
+      ],
+      "stable_chain_id": "CHAIN-7FEA7A26A000960F",
+      "score": 80,
+      "independent_branch_count": 3
+    },
+    "native_click_scope": {
+      "chain_id": "CHAIN-7FEA7A26A000960F",
+      "session_id": "UNIFIED-FINAL",
+      "same_dashboard": true
+    },
+    "revision_isolation_when_stages_delayed": true,
+    "return_clears_native_filters": true,
+    "latest_inactive_not_resurrected": true,
+    "responsive_finite_dimensions": {
+      "width": 942,
+      "height": 1712
+    },
+    "page_errors": [],
+    "native_query_responses_checked": 30,
+    "max_searched_shards": 6,
+    "failed_shards": 0
+  },
+  "native_wazuh_rules": {
+    "wazuh_version": "4.14.7",
+    "native_binary": "wazuh-logtest-legacy",
+    "expected_all_14_rules": true,
+    "full_wire_stage_documents_and_high_summary": true,
+    "matched_ids": [
+      "119201",
+      "119202",
+      "119203",
+      "119204",
+      "119205",
+      "119206",
+      "119207",
+      "119208",
+      "119209",
+      "119210",
+      "119211",
+      "119212",
+      "119213",
+      "119214",
+      "119213",
+      "119213",
+      "119213",
+      "119213",
+      "119214"
+    ],
+    "exit_code": 0
+  },
+  "bounded_http": {
+    "isolated_private_http_check": true,
+    "client": {
+      "requested": 100,
+      "scheduled": 100,
+      "status_counts": {
+        "200": 100
+      },
+      "max_rate": 20,
+      "max_concurrency": 4,
+      "elapsed_seconds": 4.985,
+      "dos_success_proven": false,
+      "training_label": null
+    },
+    "server_requests": 100,
+    "server_request_span_seconds": 4.978,
+    "server_max_active": 1,
+    "actual_dos_demonstrated": false
+  },
+  "config_installer": {
+    "preserved_existing_fields": true,
+    "idempotent_second_run": true,
+    "backup_before_change": true
+  },
+  "native_dashboard_cleanup": {
+    "backup_before_delete": true,
+    "old_dashboard_removed": true,
+    "native_dashboard_preserved": true,
+    "new_dashboard_preserved": true,
+    "shared_visualization_preserved": true
+  },
+  "limitations": [
+    "Not a production validation or independent labeled accuracy/recall benchmark.",
+    "Wazuh validation used the native legacy logtest binary 4.14.7, not full manager/Filebeat/indexer delivery.",
+    "DoS degradation path checked with fixtures; healthy isolated HTTP endpoint remained healthy.",
+    "No real Windows host tests or user-lab end-to-end latency verification in this environment."
+  ]
+}

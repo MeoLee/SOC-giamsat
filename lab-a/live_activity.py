@@ -196,6 +196,7 @@ class Activities:
         append(self.path, rows)
         for (kind, host, src, user), count in groups.items():
             print('[AUTH]', safe(src), '->', safe(host), 'user='+safe(user), safe(kind), 'count='+str(count), flush=True)
+        self.publish_chains(engine)
         for case in engine.cases:
             # Publish on stage/status transitions, not once per failed password.
             stages = [s['name'] for s in case['stages']]
@@ -244,6 +245,48 @@ class Activities:
                 if len(encoded(row).encode('utf-8')) > 6000:
                     raise RuntimeError('Correlation event exceeds 6000 bytes; local case/evidence preserved. Shorten metadata before Wazuh delivery.')
                 self.publisher.enqueue(row)
+
+    def publish_chains(self, engine):
+        from lab_campaign import wire_events
+        from lab_correlation import digest
+        from wazuh_bridge import encoded
+        if not hasattr(self, 'chain_revisions'):
+            self.chain_revisions = {}
+            self.chain_previous = {}
+            self.chain_branch_cases = {}
+        present = {c['chain_id']:c for c in getattr(engine,'chains',[])}
+        for chain in present.values():
+            revision=digest(chain)
+            if self.chain_revisions.get(chain['chain_id'])==revision: continue
+            docs=wire_events(chain,self.folder.name,engine.snapshot)
+            if any(len(encoded(d).encode('utf-8'))>6000 for d in docs):
+                raise RuntimeError('Chain document exceeds 6000 bytes; full local evidence preserved.')
+            append(self.path, docs)
+            if self.publisher:
+                for doc in docs:self.publisher.enqueue(doc)
+            self.chain_revisions[chain['chain_id']]=revision
+            self.chain_previous[chain['chain_id']]=docs[-1]
+            self.chain_branch_cases[chain['chain_id']]={b['case_id'] for b in chain['branches']}
+            print('[CHAIN]',chain['chain_id'], 'stages='+str(len(chain['stages'])),
+                  'risk='+str(chain['risk_score']), ';'.join(chain['categories']),flush=True)
+        # Delayed evidence can attach a former standalone case to a scan root.
+        # Publish a latest tombstone; readers must filter active AFTER latest.
+        for chain_id in set(self.chain_previous)-set(present):
+            old=self.chain_previous.pop(chain_id)
+            self.chain_revisions.pop(chain_id,None)
+            old_branches=self.chain_branch_cases.pop(chain_id,set())
+            replacements=[c['chain_id'] for c in present.values() if
+                old_branches.intersection(b['case_id'] for b in c['branches']) and
+                (c['source_ip'],c['target_ip'],c['target_host'])==
+                (old['source_ip'],old['target_ip'],old['target_host'])]
+            tombstone={**old, 'chain_active':False, 'superseded_by':replacements,
+                       'event_id':digest([old['event_id'],'superseded',replacements])}
+            # Keep source sort monotonic, including late scan delivery.
+            from lab_correlation import instant, stamp
+            from datetime import timedelta
+            tombstone['event_time']=stamp(instant(old['event_time'])+timedelta(microseconds=1))
+            append(self.path,[tombstone])
+            if self.publisher:self.publisher.enqueue(tombstone)
 
     def flush(self, force=False):
         self.flush_raw()
