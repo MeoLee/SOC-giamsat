@@ -1,6 +1,6 @@
 # Lab A 0.4 — bản nghiên cứu cải tiến
 
-**Bản đóng gói hiện hành: 0.4.5.** Có [bảng Attack Chain Detail và scoring trên Wazuh](docs/CHAIN-DASHBOARD-VI.md), [sửa SYN/recon và cài rule](docs/RECON-FIX-VI.md), [Wazuh realtime](docs/WAZUH-REALTIME-VI.md), cùng [train Quality bằng dashboard](docs/TRAIN-DASHBOARD-VI.md). Giữ model và venv hiện có. Nếu SID 9900003 đã cài thành công, cập nhật từ 0.4.4 chỉ cần source và import Saved objects; không phải cài lại bridge hoặc train lại.
+**Bản đóng gói hiện hành: 0.4.6.** Có [Chain Investigation, bằng chứng từng bước và kịch bản năm bước](docs/CHAIN-INVESTIGATION-VI.md), [bảng Attack Chain Detail và scoring trên Wazuh](docs/CHAIN-DASHBOARD-VI.md), [sửa SYN/recon và cài rule](docs/RECON-FIX-VI.md), [Wazuh realtime](docs/WAZUH-REALTIME-VI.md), cùng [train Quality bằng dashboard](docs/TRAIN-DASHBOARD-VI.md). Giữ model và venv hiện có. Dashboard chi tiết import riêng, giữ bảng 0.4.5; hai hành động endpoint cần cài probe có kiểm soát, không phải audit cho mọi lệnh. Không phải train lại.
 
 Gói gồm sửa bộ cài hai EVE output và flow ID có đuôi `.000000`. Xem [kết quả HTTP burst thật](docs/HTTP-BURST-REVIEW-20261020-VI.md); model false positive được ghi nhận riêng. Nếu đã cài ZIP0.4 và gặp HTTP400/dashboard hoặc test offset10≠9, xem [bản vá Windows](docs/WINDOWS-FIX-VI.md).
 

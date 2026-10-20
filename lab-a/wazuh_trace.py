@@ -103,12 +103,67 @@ def auth_outcomes(capture, operator):
             'events':ordered}
 
 
+def endpoint_outcomes(capture, operator):
+    """Re-read raw probe evidence and require the same case/auth connection."""
+    from lab_correlation import instant, digest
+    from lab_endpoint import normalize
+    from chain_exercise import verify_server
+    snapshot = read_json(capture/'correlation-cases.json')
+    config = snapshot['config']
+    token = operator.get('endpoint_probe_id')
+    start, end = instant(operator['started_at']), instant(operator['ended_at'])
+    events, invalid = {}, 0
+    for source, kind in config.get('source_kinds', {}).items():
+        if kind != 'endpoint': continue
+        with (capture/source).open(encoding='utf-8-sig') as stream:
+            for raw in stream:
+                if not raw.strip(): continue
+                try:
+                    event = normalize(raw, config, source)
+                    if not event or event['probe_id'] != token: continue
+                    if (event['source_ip'] != operator['scope']['source_ip'] or
+                            event['target_ip'] != operator['scope']['target_ip'] or
+                            event['username'] != operator['username'] or
+                            not start <= instant(event['started_at']) <= instant(event['event_time']) <= end):
+                        continue
+                    events['event:'+digest(event)] = event
+                except (ValueError, KeyError, TypeError): invalid += 1
+    required = ['possible_recon', 'repeated_auth_failures', 'auth_success_after_failures',
+                'observed_shell_execution', 'observed_file_transfer']
+    ids = set(events)
+    matches = [c for c in snapshot['cases'] if [s['name'] for s in c['stages']] == required
+               and c['source_ip'] == operator['scope']['source_ip']
+               and c['target_ip'] == operator['scope']['target_ip']
+               and c['username'] == operator['username']
+               and all(s.get('probe_id') == token and set(s['evidence_ids']) <= ids for s in c['stages'][-2:])]
+    auth = auth_outcomes(capture, operator)
+    bound = []
+    for case in matches:
+        success_ids = set(case['stages'][2]['evidence_ids'])
+        for success in auth['events']:
+            if (success['kind'] != 'auth.success' or 'event:'+digest(success) not in success_ids): continue
+            if all(e['source_port'] == success['source_port'] and
+                   0 <= (instant(e['started_at'])-instant(success['event_time'])).total_seconds() <= config.get('endpoint_window_seconds',300)
+                   for e in events.values()):
+                bound.append(case['chain_id'])
+    try:
+        verify_server([operator.get('transfer_server_evidence', {})], operator['scope']['target_ip'], token)
+        served = True
+    except ValueError: served = False
+    return {'raw_endpoint_events':len(events), 'invalid_endpoint_records':invalid,
+            'matched_chain_ids':bound, 'transfer_server_evidence_verified':served,
+            'five_stage_chain_verified':bool(operator.get('complete') and len(events)==2 and bound and served and not invalid
+                and auth['maximum_failures_in_60_seconds']>=8 and auth['success_within_300_seconds_after_last_failure']),
+            'evidence_scope':'controlled_lab_probe_only',
+            'general_endpoint_audit_coverage':False, 'confirmed_compromise':False}
+
+
 def recon_coverage(capture,operator):
     """Normalized, deduplicated SYN evidence in the operator's actual scope."""
     from lab_recon import instant, scan_evidence, canonical_flow_id
     path=capture/'correlation-events.jsonl'
     scenario=operator['scenario']
-    minimum={'normal-http':12,'single-port':24,'port-scan':32,'chain':32,
+    minimum={'normal-http':12,'single-port':24,'port-scan':32,'chain':32,'chain-extended':32,
              'normal-ssh':5,'ssh-negative':2,'ssh-burst':8,'ssh-success':1,'web-sqli':1}.get(scenario)
     if scenario=='http-burst':minimum=operator.get('http_requests')
     events={};event_ids=set();invalid=0
@@ -191,13 +246,19 @@ def main():
             report['unexpected_rule_ids']=[i for i in report['expected_absent_rule_ids']
                                            if i in report['alert_rule_counts']]
             report['recon_observation_coverage']=recon_coverage(a.capture,operator)
-            if 'ssh' in operator['scenario'] or operator['scenario']=='chain':
+            if 'ssh' in operator['scenario'] or operator['scenario'] in ('chain','chain-extended'):
                 report['raw_auth_outcomes']=auth_outcomes(a.capture,operator)
+            if operator['scenario']=='chain-extended':
+                report['endpoint_outcomes']=endpoint_outcomes(a.capture,operator)
             report['expectations_are_not_training_labels']=True
             report['negative_result_coverage_complete']=bool(capture['closed'] and not result['tail_limited'])
             if report['expected_absent_rule_ids']:
                 report['negative_result_coverage_complete'] &= report['recon_observation_coverage']['coverage_sufficient']
         code=0 if alerts else 2
+        if a.operator and report.get('scenario')=='chain-extended':
+            if (not capture['closed'] or report['missing_expected_rule_ids']
+                    or not report['endpoint_outcomes']['five_stage_chain_verified']):
+                code=2
     else:
         started=time.monotonic()
         event=make_event('connection_test',['connection_test',time.time_ns()],

@@ -1,3 +1,18 @@
+# 0.4.6 chain investigation — 2026-10-20
+
+- Add a separate Wazuh Chain Investigation dashboard with full-text row
+  expansion, source/account/timing context, unique evidence counts and score
+  components; preserve the existing five dashboard objects and user layout.
+- Select latest source-event time at microsecond precision so revisions sharing
+  a Wazuh timestamp millisecond cannot arbitrarily show an earlier stage.
+- Add opt-in fixed benign shell/HTTP-file probes, scoped to a dedicated lab
+  account. Extend one SSH case only with matching source/target/account/port,
+  event-time window and token; require verified transfer bytes/hash.
+- Add chain-extended, bounded one-file server lifecycle and raw endpoint/auth/
+  server trace checks. No SSH/PAM/rule changes, inferred C2 or general audit claim.
+- Document Attack Flow, ATT&CK technique sources and local scoring policy;
+  preserve MLP weights/thresholds and the existing capped operational score.
+
 # 0.4.5 chain dashboard — 2026-10-20
 
 - Add stable chain display IDs, observed-stage summaries, ATT&CK candidates and

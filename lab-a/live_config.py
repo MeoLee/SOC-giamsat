@@ -67,8 +67,8 @@ def load_config(path=None):
     for s in sources:
         if not isinstance(s, dict):
             raise ValueError('Source must be an object')
-        if s.get('kind') not in ('eve', 'auth', 'wazuh', 'web', 'raw'):
-            raise ValueError('Source kind must be eve, auth, wazuh, web or raw')
+        if s.get('kind') not in ('eve', 'auth', 'wazuh', 'web', 'raw', 'endpoint'):
+            raise ValueError('Source kind must be eve, auth, wazuh, web, raw or endpoint')
         for key in ('container', 'path', 'output'):
             if not isinstance(s.get(key), str) or not s[key] or any(ord(c) < 32 for c in s[key]):
                 raise ValueError('Invalid source ' + key)
@@ -87,7 +87,8 @@ def load_config(path=None):
     if not isinstance(settings, dict):
         raise ValueError('correlation must be an object')
     for key in ('failure_threshold', 'failure_window_seconds', 'success_window_seconds',
-                'recon_window_seconds', 'max_events','recon_port_threshold','recon_port_window_seconds'):
+                'recon_window_seconds', 'max_events','recon_port_threshold','recon_port_window_seconds',
+                'endpoint_window_seconds'):
         if key in settings and (type(settings[key]) is not int or settings[key] < 1):
             raise ValueError('Invalid correlation configuration: ' + key)
     correlation = {**settings, 'all_agents': True,

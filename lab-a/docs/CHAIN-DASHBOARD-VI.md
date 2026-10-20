@@ -1,5 +1,8 @@
 # Lab A 0.4.5: Attack Chain Detail và Scoring trên Wazuh
 
+Bản 0.4.6 có [dashboard điều tra riêng và chuỗi năm bước có probe endpoint](CHAIN-INVESTIGATION-VI.md).
+Hướng dẫn 0.4.5 bên dưới vẫn áp dụng cho dashboard ban đầu.
+
 ## Phạm vi của bản này
 
 Log cập nhật của người dùng đã đạt 66/66 kiểm tra trên Windows. Bản 0.4.5 bổ

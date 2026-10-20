@@ -128,6 +128,9 @@ def recon_event(event, config, sensor_id=None):
 def normalize_line(source, raw, config):
     kind = config.get('source_kinds', {}).get(source, source)
     if kind == 'raw': return None
+    if kind == 'endpoint':
+        from lab_endpoint import normalize
+        return normalize(raw, config, source)
     if kind == 'web':
         from lab_web import apache_tsv, sql_evidence
         event = apache_tsv(raw)
@@ -265,6 +268,8 @@ def build_cases(events, config):
             cluster.append(e)
         if cluster:
             add_scan_case(cases, key, cluster)
+    from lab_endpoint import extend_cases
+    extend_cases(cases, events, config)
     from lab_risk import case_assessment
     for case in cases.values():
         case.update(case_assessment(case))
@@ -289,7 +294,10 @@ class Correlator:
         self.directory = Path(output_directory)
         self.config = {**DEFAULTS, **(config or {})}
         for key in ('failure_threshold', 'failure_window_seconds', 'success_window_seconds',
-                    'recon_window_seconds', 'max_events','recon_port_threshold','recon_port_window_seconds'):
+                    'recon_window_seconds', 'max_events','recon_port_threshold','recon_port_window_seconds',
+                    'endpoint_window_seconds'):
+            if key == 'endpoint_window_seconds' and key not in self.config:
+                continue
             if type(self.config[key]) is not int or self.config[key] < 1:
                 raise ValueError('Invalid correlation configuration: ' + key)
         if not 2<=self.config['recon_port_threshold']<=65536 or self.config['recon_port_window_seconds']>3600:

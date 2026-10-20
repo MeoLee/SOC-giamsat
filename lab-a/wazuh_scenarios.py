@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import uuid
 
 from live_config import container_name
 from soc_ai.common import read_json, write_json
@@ -24,6 +25,7 @@ SCENARIOS = {
     'ssh-burst':('Eight intentionally wrong passwords to a dedicated test account', ['119204']),
     'ssh-success':('One correct interactive login; standalone control, not a full chain', ['119208']),
     'chain':('32-port recon, eight wrong passwords, then one correct login in one Live session', ['119203','119204','119205']),
+    'chain-extended':('Same SSH chain, then instrumented fixed shell execution and verified benign file transfer', ['119203','119204','119205']),
     'web-sqli':('One SQL syntax indicator GET against DVWA; exploitation is not asserted', ['119209','119206']),
     'http-burst':('At most 50 GETs, at most 5 per second, 10-second start window; not a DDoS label', ['119210']),
 }
@@ -78,17 +80,23 @@ def scan_command(client,target):
         '--max-rate','5','--host-timeout','25s','-p','1-32',target]
 
 
-def ssh_command(client,target,username,wrong=False):
+def ssh_command(client,target,username,wrong=False,probe_token=None):
     # Remote command is fixed; account and IP are independently validated.
     argv=['docker','exec']
     if not wrong: argv+=['-it']
     argv += [client,'timeout','25' if not wrong else '7']
     if wrong: argv+=['sshpass','-p','SOC-LAB-INTENTIONAL-WRONG-PASSWORD-ONLY']
+    remote = 'whoami; date -Is; uptime; sleep 5'
+    if probe_token is not None:
+        from endpoint_probe import PROBE_PATH
+        if wrong or not re.fullmatch(r'[a-f0-9]{32}',probe_token):
+            raise ValueError('A valid token is allowed only for the successful probe session')
+        remote = 'python3 '+PROBE_PATH+' --token '+probe_token
     argv += ['ssh','-o','ConnectTimeout=3','-o','ConnectionAttempts=1',
         '-o','NumberOfPasswordPrompts=1','-o','PubkeyAuthentication=no',
         '-o','PreferredAuthentications=password','-o','StrictHostKeyChecking=accept-new',
         '-o','UserKnownHostsFile=/tmp/soc-wazuh-scenarios-known-hosts',
-        username+'@'+target,'whoami; date -Is; uptime; sleep 5']
+        username+'@'+target,remote]
     return argv
 
 
@@ -177,13 +185,23 @@ def main():
         if expect_password_rejection:
             print(f'EXPECTED_PASSWORD_REJECTION: exit={r.returncode}',flush=True)
         return r
+    server_token = uuid.uuid4().hex if a.scenario=='chain-extended' else None
+    server_started = False
     try:
         # One operation per capture. A chain is one operation with multiple steps.
         with (a.capture/'scenario-operation.json').open('x',encoding='utf-8') as f:
             json.dump({'scenario':a.scenario,'operator_file':str(path)},f)
         write_json(path,report)
-        burst=a.scenario in ('ssh-burst','ssh-negative','chain')
-        if a.scenario.startswith('ssh') or a.scenario in ('normal-ssh','chain'):
+        if server_token:
+            from endpoint_probe import LOG_PATH
+            if not any(s.get('container')==a.sensor and s.get('path')==LOG_PATH for s in capture.get('sources',[])):
+                raise ValueError('This capture has no endpoint probe source; install telemetry and start a NEW Live')
+            from chain_exercise import preflight
+            preflight(a.sensor,a.username,command)
+            report.update(endpoint_probe_id=server_token,endpoint_evidence_scope='controlled_lab_probe_only',
+                          expected_stage_count=5)
+        burst=a.scenario in ('ssh-burst','ssh-negative','chain','chain-extended')
+        if a.scenario.startswith('ssh') or a.scenario in ('normal-ssh','chain','chain-extended'):
             command(['docker','exec',a.sensor,'id',a.username])
         if burst:
             command(['docker','exec',a.client,'sh','-c','command -v sshpass'])
@@ -192,7 +210,7 @@ def main():
                 'from pathlib import Path; print("\\n".join(l for n in ("sshd","common-auth","common-account") if (Path("/etc/pam.d")/n).exists() for l in (Path("/etc/pam.d")/n).read_text().splitlines() if not l.lstrip().startswith("#")))'])
             if re.search(r'pam_(?:faillock|tally2)\.so',check.stdout.decode(errors='replace')):
                 raise ValueError('Account lockout module found; review the dedicated lab account policy first')
-        if a.scenario in ('port-scan','chain'):
+        if a.scenario in ('port-scan','chain','chain-extended'):
             command(scan_command(a.client,a.target))
         if a.scenario=='single-port':
             for _ in range(24):
@@ -219,10 +237,18 @@ def main():
                         expect_password_rejection=True,timeout=12)
             report['failure_attempts']=count
             report['failure_attempts_seconds']=round(time.monotonic()-started,3)
-        if a.scenario in ('normal-ssh','ssh-success','ssh-negative','chain'):
+        if server_token:
+            from chain_exercise import start_server
+            time.sleep(2)
+            server_started = True
+            start_server(a.client,scope['source_ip'],a.target,server_token,command)
+        if a.scenario in ('normal-ssh','ssh-success','ssh-negative','chain','chain-extended'):
             for _ in range(5 if a.scenario=='normal-ssh' else 1):
                 print('Enter the correct dedicated lab account password at the SSH prompt.',flush=True)
-                command(ssh_command(a.client,a.target,a.username),interactive=True,timeout=35)
+                command(ssh_command(a.client,a.target,a.username,probe_token=server_token),interactive=True,timeout=35)
+        if server_token:
+            from chain_exercise import read_state,verify_server
+            report['transfer_server_evidence']=verify_server(read_state(a.client,server_token,command),a.target,server_token)
         if a.scenario=='web-sqli':
             command(['docker','exec',a.client,'curl','--max-time','5','--retry','0',
                 '--silent','--show-error','--output','/tmp/soc-wazuh-sqli-response.html',
@@ -236,6 +262,13 @@ def main():
         report['error']=str(exc);print('SCENARIO_FAILED:',exc)
         return 2
     finally:
+        if server_started:
+            from chain_exercise import STOP_SERVER
+            try:
+                subprocess.run(['docker','exec',a.client,'python3','-c',STOP_SERVER,server_token],
+                               capture_output=True,timeout=10,check=True)
+            except (OSError,subprocess.SubprocessError) as exc:
+                report['server_cleanup_error']=str(exc)
         report['ended_at']=now();write_json(path,report);print('EVIDENCE:',path)
 
 

@@ -1,6 +1,7 @@
 """Explainable operational priority, not a probability or ground-truth label."""
 import hashlib
 import json
+from datetime import datetime
 
 POLICY = 'soc-operational-risk/0.1'
 
@@ -11,6 +12,8 @@ STAGE_LABELS = {
     'auth_success_after_failures': ('Login after password guessing', 'T1078'),
     # Public-facing exposure is not established merely by a SQLi signature.
     'possible_web_sqli': ('SQL injection attempt', None),
+    'observed_shell_execution': ('Shell execution (lab probe)', 'T1059.004'),
+    'observed_file_transfer': ('File transfer (lab probe)', 'T1105'),
 }
 
 
@@ -47,6 +50,32 @@ def case_assessment(case):
     techniques = list(dict.fromkeys(STAGE_LABELS[name][1] for name in names
                                     if STAGE_LABELS[name][1]))
     attack_type = ' -> '.join(labels)
+    # Parse the offsets before comparing times: lexical order is not event order
+    # when inputs use different UTC offsets.
+    moment = lambda value: datetime.fromisoformat(value.replace('Z', '+00:00'))
+    started = min((s['start_time'] for s in stages), key=moment)
+    ended = max((s['end_time'] for s in stages), key=moment)
+    stage_details = []
+    for i, stage in enumerate(stages, 1):
+        label, technique = STAGE_LABELS[stage['name']]
+        detail = (str(i)+'. '+label+' ['+(technique or 'unmapped')+']; '
+                  +stage['start_time']+' -> '+stage['end_time']+'; '
+                  +str(len(set(stage['evidence_ids'])))+' evidence event(s)')
+        if stage['name'] == 'possible_recon':
+            detail += ('; distinct ports='+str(stage['distinct_destination_ports'])
+                       +'; threshold='+str(stage['port_threshold'])
+                       +' within '+str(stage['port_window_seconds'])+'s')
+        elif stage['name'] == 'repeated_auth_failures':
+            detail += ('; password failures='+str(stage['failure_count'])
+                       +'; threshold='+str(stage['threshold'])
+                       +' within '+str(stage['window_seconds'])+'s')
+        elif stage['name'] == 'observed_shell_execution':
+            detail += '; fixed command='+stage['command']
+        elif stage['name'] == 'observed_file_transfer':
+            detail += ('; bytes='+str(stage['artifact_bytes'])
+                       +'; URL='+stage['transfer_url']
+                       +'; SHA256='+stage['artifact_sha256'])
+        stage_details.append(detail)
     return {**priority,
             'chain_id': 'CHAIN-'+hashlib.sha256(case['case_id'].encode()).hexdigest()[:16].upper(),
             'techniques': ';'.join(techniques) or 'unmapped',
@@ -56,6 +85,12 @@ def case_assessment(case):
             'conclusion': priority['risk_level'].upper()+': '+attack_type+
                           '. Review evidence; compromise unconfirmed.',
             'attack_summary': str(len(nodes))+' observed stage(s); sequence hypothesis; compromise unconfirmed.',
+            'chain_started_at': started, 'chain_last_seen_at': ended,
+            'chain_duration_seconds': round((moment(ended)-moment(started)).total_seconds(), 6),
+            'chain_evidence_count': len({eid for s in stages for eid in s['evidence_ids']}),
+            'chain_password_failure_count': sum(s.get('failure_count', 0) for s in stages),
+            'chain_stage_details': '\n'.join(stage_details),
+            'endpoint_evidence_scope': case.get('endpoint_evidence_scope', 'no_endpoint_probe'),
             'risk_score_base':base,'risk_score_recon_bonus':bonus,'risk_score_cap':95,
             'attack_chain': ' -> '.join(names), 'attack_chain_stage_count':len(nodes),
             'attack_chain_is_causal_proof':False,

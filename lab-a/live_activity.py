@@ -207,7 +207,7 @@ class Activities:
             row = make_event('correlation', [self.folder.name, case['case_id'], revision],
                 case_id=case['case_id'], case_status=case['status'], source_ip=case['source_ip'],
                 target_ip=case['target_ip'], target_host=case['target_host'], username=case['username'],
-                stages=' -> '.join(stages), evidence_ids=evidence[:8], evidence_count=len(evidence),
+                stages=' -> '.join(stages), evidence_ids=evidence[:4], evidence_count=len(evidence),
                 evidence_file=str(engine.snapshot), confirmed_compromise=False,
                 activity=case['explanation'])
             details = case_assessment(case)
@@ -215,8 +215,14 @@ class Activities:
             # the graph as a JSON string; full structured stages stay local.
             graph = details.pop('attack_chain_graph')
             for node in graph['nodes']:
-                node['evidence_ids'] = node['evidence_ids'][:2]
+                if len(graph['nodes']) > 3:
+                    # Keep a five-stage message below the Wazuh log limit.
+                    # Full node/evidence links remain in correlation-cases.json.
+                    node.pop('evidence_ids')
+                else:
+                    node['evidence_ids'] = node['evidence_ids'][:2]
             row.update(details, attack_chain_json=json.dumps(graph, separators=(',', ':')),
+                       graph_evidence_ids_omitted=len(graph['nodes']) > 3,
                        event_time=case['last_seen'], session_id=self.folder.name)
             if case['status'] == 'possible_web_sqli':
                 row.update(detection_method='http_rule_evidence',
@@ -234,6 +240,9 @@ class Activities:
             print('[CORRELATION]', safe(case['source_ip']), '->', safe(case['target_host']),
                   safe(case['status']), safe(row['stages']), flush=True)
             if self.publisher:
+                from wazuh_bridge import encoded
+                if len(encoded(row).encode('utf-8')) > 6000:
+                    raise RuntimeError('Correlation event exceeds 6000 bytes; local case/evidence preserved. Shorten metadata before Wazuh delivery.')
                 self.publisher.enqueue(row)
 
     def flush(self, force=False):
