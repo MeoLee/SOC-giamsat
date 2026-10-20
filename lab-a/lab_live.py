@@ -198,7 +198,7 @@ class LiveCollector(Collector):
             self.correlator.write(correlation_status, self.state['status'])
         report = {
             'version': 'soc-live-observer/0.4', 'status': status,
-            'software_version': '0.4.4-research',
+            'software_version': '0.4.5-research',
             'recon_policy': 'distinct_tcp_destination_ports/0.1',
             'complete': status == 'completed', 'mode': 'observe',
             'started_at': self.live_started, 'updated_at': now(),

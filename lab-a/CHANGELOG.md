@@ -1,3 +1,15 @@
+# 0.4.5 chain dashboard — 2026-10-20
+
+- Add stable chain display IDs, observed-stage summaries, ATT&CK candidates and
+  explicit base/recon-bonus scoring fields to correlation events.
+- Preserve existing risk policy, evidence-linked graphs, account/source/time
+  scoping and the distinction between observations and confirmed compromise.
+- Ship additive OpenSearch Dashboards saved objects: latest revision per chain,
+  transition history and policy explanation; use existing Wazuh alert fields
+  without index mapping changes, global defaults or new credentials.
+- Keep existing model weights, operating threshold, feature contract, Wazuh XML
+  IDs and training engine. No execution/transfer/C2 stage inferred from SSH login.
+
 # 0.4.3 operational Wazuh realtime — 2026-10-19
 
 - Publish sensor signatures without waiting for completed-flow MLP inference;

@@ -1,5 +1,11 @@
 # Tải gói
 
+- **[AI Lab A 0.4.5 — Attack Chain Detail và Scoring trên Wazuh](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.5-Research-20261020.zip)**
+- [Bản vá 0.4.4 lên 0.4.5, gồm dashboard và các hotfix trước](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.5-Chain-Dashboard-20261020.zip)
+- [Hướng dẫn import Saved objects và chạy chain](../lab-a/docs/CHAIN-DASHBOARD-VI.md)
+- [SHA256 full source 0.4.5](SOC-AI-Lab-A-v0.4.5-Research-20261020.zip.sha256)
+- [SHA256 bản vá dashboard 0.4.5](SOC-AI-Lab-A-v0.4.5-Chain-Dashboard-20261020.zip.sha256)
+
 - **[AI Lab A 0.4.4 — gồm sửa flow ID trùng và bộ cài EVE](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Research-Flow-ID-Fix-20261020.zip)**
 - [Bản vá flow ID cho máy đã có 0.4.4, gồm sửa bộ cài EVE](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Flow-ID-Fix-20261020.zip)
 - [Phân tích ca HTTP burst và hướng dẫn cập nhật](../lab-a/docs/HTTP-BURST-REVIEW-20261020-VI.md)

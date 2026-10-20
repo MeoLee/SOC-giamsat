@@ -1,8 +1,9 @@
 # SOC-giamsat
 
 - [AI Lab A 0.4 — bắt đầu, cài mới, train và kiểm thử](lab-a/README-START-VI.md)
-- [Tải ZIP 0.4.4 gồm sửa flow ID trùng và bộ cài EVE](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Research-Flow-ID-Fix-20261020.zip)
-- [Bản vá flow ID cho máy đã có 0.4.4](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Flow-ID-Fix-20261020.zip)
+- [Tải ZIP 0.4.5 với bảng Attack Chain Detail và Scoring](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.5-Research-20261020.zip)
+- [Cập nhật 0.4.4 lên 0.4.5 và import dashboard](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.5-Chain-Dashboard-20261020.zip)
+- [Triển khai bảng Wazuh và kiểm thử chain theo bằng chứng](lab-a/docs/CHAIN-DASHBOARD-VI.md)
 - [Phân tích ca HTTP burst thật: 33 kết nối, một MLP false positive](lab-a/docs/HTTP-BURST-REVIEW-20261020-VI.md)
 - [Cập nhật 0.4.4 và kiểm thử HTTP burst/quét cổng](lab-a/docs/RECON-FIX-VI.md)
 - [Sửa Live dừng khi ghép HTTP status từ EVE/Wazuh](lab-a/docs/LIVE-SQLI-FIX-VI.md)

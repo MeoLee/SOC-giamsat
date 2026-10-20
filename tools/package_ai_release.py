@@ -13,7 +13,9 @@ import zipfile
 
 REQUIRED = {'soc_ai/web/dashboard.html', 'soc_ai/predict.py', 'soc_ai/train.py',
             'run_checks.py', 'Setup-AI.ps1', 'test_context_runtime.py',
-            'lab_recon.py', 'setup_recon.py', 'soc-recon.rules', 'test_lab_recon.py'}
+            'lab_recon.py', 'setup_recon.py', 'soc-recon.rules', 'test_lab_recon.py',
+            'chain_dashboard.py', 'test_chain_dashboard.py',
+            'dashboards/soc-ai-attack-chain.ndjson'}
 
 
 def tracked_source(repo):

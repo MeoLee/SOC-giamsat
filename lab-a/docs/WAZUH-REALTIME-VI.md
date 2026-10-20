@@ -1,5 +1,8 @@
 # Kiểm thử AI → Wazuh Dashboard theo thời gian thực
 
+**Cập nhật 0.4.5:** có [bảng Attack Chain Detail, scoring mới nhất theo case và
+hướng dẫn import Saved objects](CHAIN-DASHBOARD-VI.md). Giữ model và bridge.
+
 **Cập nhật 0.4.4:** xem [sửa báo nhầm SYN burst](RECON-FIX-VI.md). Sau khi cập
 nhật source, chạy setup_recon.py trước Live. Port scan dùng 119203 dựa trên số
 cổng khác nhau; SYN observations không còn được bridge đẩy thành 119209.
