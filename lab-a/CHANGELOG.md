@@ -1,3 +1,14 @@
+# 0.4.6 chain shard compatibility hotfix — 2026-10-20
+
+- Fix all 18 Chain Investigation Top Hit sorts for daily indices that have no
+  data.event_time mapping: explicit unmapped types, missing-last and timestamp
+  fallback in per-metric Advanced JSON. No index/data/mapping changes.
+- Preserve source-time precision, five-stage logic, existing object IDs and
+  model/probe configuration. A two-visualization repair import preserves layout;
+  the complete seven-object dashboard is also fixed for fresh installation.
+- Reproduce partial shard failure on legacy/current indices, then replay real
+  browser requests and verify all shards succeed and latest stage still renders.
+
 # 0.4.6 chain investigation — 2026-10-20
 
 - Add a separate Wazuh Chain Investigation dashboard with full-text row

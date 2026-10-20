@@ -2,8 +2,9 @@
 
 - [AI Lab A 0.4 — bắt đầu, cài mới, train và kiểm thử](lab-a/README-START-VI.md)
 - [Chi tiết chain, kịch bản năm bước và nguồn Attack Flow/ATT&CK](lab-a/docs/CHAIN-INVESTIGATION-VI.md)
-- [Cập nhật 0.4.5 lên 0.4.6 — Chain Investigation](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.6-Chain-Investigation-20261020.zip)
-- [Full source 0.4.6](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.6-Research-20261020.zip)
+- [Cập nhật 0.4.5/0.4.6 — Chain Investigation, gồm sửa lỗi shard](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.6-Chain-Investigation-Shard-Fix-20261020.zip)
+- [Full source 0.4.6 gồm sửa shard](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.6-Research-Shard-Fix-20261020.zip)
+- [Sửa No mapping found for data.event_time và import lại](lab-a/docs/CHAIN-SHARD-FIX-VI.md)
 - [Tải ZIP 0.4.5 với bảng Attack Chain Detail và Scoring](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.5-Research-20261020.zip)
 - [Cập nhật 0.4.4 lên 0.4.5 và import dashboard](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.5-Chain-Dashboard-20261020.zip)
 - [Triển khai bảng Wazuh và kiểm thử chain theo bằng chứng](lab-a/docs/CHAIN-DASHBOARD-VI.md)

@@ -1,5 +1,10 @@
 # Lab A 0.4.6: chi tiết chain và kịch bản năm bước trên Wazuh
 
+Nếu đã import bản đầu và gặp `No mapping found for [data.event_time]`, xem
+[bản sửa tương thích index cũ](CHAIN-SHARD-FIX-VI.md). Bản ZIP có đuôi
+`Shard-Fix` và NDJSON hiện hành đã chứa sửa này; dashboard đã cài chỉ cần import
+file repair gồm hai visualization theo hướng dẫn sửa shard.
+
 Ảnh dashboard thật đã nhận đúng chain quét cổng, medium/40/T1046/1 stage.
 Ảnh Lab B có nhiều stage vì các case trong đó chứa nhiều hành vi; thêm cột
 không tự biến một ca quét cổng thành một chuỗi thực thi lệnh hoặc tải file.
@@ -54,7 +59,7 @@ Không ép mapping, cộng hoặc lấy trung bình điểm qua các revision.
 
 1. Dừng Live, sao lưu thư mục source hiện tại. Nếu đang chỉnh dashboard 0.4.5
    như ảnh, bấm **Save** để giữ bố cục bạn muốn.
-2. Giải nén bản vá `SOC-AI-Lab-A-v0.4.6-Chain-Investigation-20261020.zip`, chép
+2. Giải nén bản vá `SOC-AI-Lab-A-v0.4.6-Chain-Investigation-Shard-Fix-20261020.zip`, chép
    nội dung trực tiếp vào `E:\SOC-Lab\AI\SOC-AI-v0.4-research` và ghi đè.
    Bản vá không chứa `live-config.json`, weights, dataset hoặc venv.
 3. Kiểm tra source:

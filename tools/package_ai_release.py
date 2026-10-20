@@ -17,6 +17,7 @@ REQUIRED = {'soc_ai/web/dashboard.html', 'soc_ai/predict.py', 'soc_ai/train.py',
             'chain_dashboard.py', 'test_chain_dashboard.py',
             'dashboards/soc-ai-attack-chain.ndjson',
             'dashboards/soc-ai-chain-investigation.ndjson',
+            'dashboards/soc-ai-chain-investigation-shard-fix.ndjson',
             'endpoint_probe.py', 'lab_endpoint.py', 'lab_transfer_server.py',
             'setup_chain_telemetry.py', 'chain_exercise.py', 'test_lab_endpoint.py'}
 

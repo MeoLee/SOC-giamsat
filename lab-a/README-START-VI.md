@@ -1,5 +1,8 @@
 # Lab A 0.4 — bản nghiên cứu cải tiến
 
+Đã có [bản sửa lỗi shard khi đọc index cũ](docs/CHAIN-SHARD-FIX-VI.md) cho Chain
+Investigation; dùng ZIP 0.4.6 có đuôi Shard-Fix và file repair gồm hai visualization.
+
 **Bản đóng gói hiện hành: 0.4.6.** Có [Chain Investigation, bằng chứng từng bước và kịch bản năm bước](docs/CHAIN-INVESTIGATION-VI.md), [bảng Attack Chain Detail và scoring trên Wazuh](docs/CHAIN-DASHBOARD-VI.md), [sửa SYN/recon và cài rule](docs/RECON-FIX-VI.md), [Wazuh realtime](docs/WAZUH-REALTIME-VI.md), cùng [train Quality bằng dashboard](docs/TRAIN-DASHBOARD-VI.md). Giữ model và venv hiện có. Dashboard chi tiết import riêng, giữ bảng 0.4.5; hai hành động endpoint cần cài probe có kiểm soát, không phải audit cho mọi lệnh. Không phải train lại.
 
 Gói gồm sửa bộ cài hai EVE output và flow ID có đuôi `.000000`. Xem [kết quả HTTP burst thật](docs/HTTP-BURST-REVIEW-20261020-VI.md); model false positive được ghi nhận riêng. Nếu đã cài ZIP0.4 và gặp HTTP400/dashboard hoặc test offset10≠9, xem [bản vá Windows](docs/WINDOWS-FIX-VI.md).

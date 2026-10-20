@@ -6,7 +6,7 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 
-from chain_dashboard import (objects, detail_objects, encoded, COLUMNS, INDEX_ID, TABLE_ID,
+from chain_dashboard import (objects, detail_objects, repair_objects, encoded, COLUMNS, INDEX_ID, TABLE_ID,
                              DASHBOARD_ID, DETAIL_DASHBOARD_ID, CONTEXT_ID, EVIDENCE_ID, QUERY)
 from lab_correlation import build_cases, DEFAULTS
 from lab_risk import case_assessment
@@ -154,6 +154,35 @@ class ChainDashboardTests(unittest.TestCase):
         self.assertFalse(state['params']['showTotal'])
         dashboard = next(r for r in rows if r['id'] == DASHBOARD_ID)
         self.assertEqual(dashboard['attributes']['refreshInterval'], {'pause': False, 'value': 1000})
+
+    def test_every_detail_top_hit_tolerates_old_daily_indices_without_event_time(self):
+        # A legacy shard may have no mapping even when it has no matching docs.
+        # Every metric builds its own sort and needs its own unmapped option.
+        metric_count = 0
+        for row in detail_objects():
+            if row['type'] != 'visualization': continue
+            state = json.loads(row['attributes']['visState'])
+            if state['type'] != 'table': continue
+            for metric in state['aggs'][1:]:
+                options = json.loads(metric['params']['json'])['sort']
+                self.assertEqual(options[0]['data.event_time'], {
+                    'order': 'desc', 'unmapped_type': 'keyword', 'missing': '_last'})
+                self.assertEqual(options[1]['timestamp']['order'], 'desc')
+                self.assertEqual(options[1]['timestamp']['unmapped_type'], 'date')
+                self.assertEqual(metric['params']['size'], 1)
+                metric_count += 1
+        self.assertEqual(metric_count, 18)
+
+    def test_repair_import_replaces_only_two_visualizations_and_preserves_layout(self):
+        rows = repair_objects()
+        bundled = Path(__file__).with_name('dashboards')/'soc-ai-chain-investigation-shard-fix.ndjson'
+        self.assertEqual(bundled.read_text(), ''.join(encoded(row)+'\n' for row in rows))
+        self.assertEqual({row['id'] for row in rows}, {
+            'soc-ai-chain-investigation-summary-v1', CONTEXT_ID})
+        self.assertTrue(all(row['type'] == 'visualization' for row in rows))
+        for row in rows:
+            self.assertEqual([(ref['type'], ref['id']) for ref in row['references']],
+                             [('index-pattern', 'soc-ai-chain-investigation-alerts-v1')])
 
 
 if __name__ == '__main__':

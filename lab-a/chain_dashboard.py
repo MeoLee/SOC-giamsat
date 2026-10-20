@@ -48,6 +48,17 @@ def encoded(value):
     return json.dumps(value, ensure_ascii=False, separators=(',', ':'))
 
 
+def latest_source_sort():
+    """Query old daily indices without requiring a new field mapping there.
+
+    Top Hits does not inherit Discover's default unmapped sort options. An
+    exists/query/time filter alone does not prevent sort construction on every
+    shard. Declare the absent type in the query instead of editing index data.
+    """
+    return [{'data.event_time': {'order': 'desc', 'unmapped_type': 'keyword', 'missing': '_last'}},
+            {'timestamp': {'order': 'desc', 'unmapped_type': 'date', 'missing': '_last'}}]
+
+
 def source():
     return {'query': {'language': 'kuery', 'query': QUERY}, 'filter': [],
             'indexRefName': 'kibanaSavedObjectMeta.searchSourceJSON.index'}
@@ -170,6 +181,7 @@ def detail_objects():
     summary_state = json.loads(summary['attributes']['visState'])
     for metric in summary_state['aggs'][1:]:
         metric['params']['sortField'] = 'data.event_time'
+        metric['params']['json'] = encoded({'sort': latest_source_sort()})
     summary['attributes']['visState'] = encoded(summary_state)
     history['attributes']['sort'] = [['timestamp', 'desc'], ['data.event_time', 'desc']]
     # These timestamps are preserved as source strings, not mappings forced on
@@ -184,7 +196,8 @@ def detail_objects():
     for i, (field, label) in enumerate(CONTEXT_COLUMNS, 2):
         state['aggs'].append({'id': str(i), 'enabled': True, 'type': 'top_hits', 'schema': 'metric',
                              'params': {'field': field, 'aggregate': 'concat', 'size': 1,
-                                        'sortField': 'data.event_time', 'sortOrder': 'desc', 'customLabel': label}})
+                                        'sortField': 'data.event_time', 'sortOrder': 'desc', 'customLabel': label,
+                                        'json': encoded({'sort': latest_source_sort()})}})
     context['attributes']['visState'] = encoded(state)
     evidence = copy.deepcopy(history)
     evidence['id'] = EVIDENCE_ID
@@ -223,6 +236,12 @@ def detail_objects():
         description='Full evidence narratives, case context and explainable score components.',
         panelsJSON=encoded(panels))
     return [index, summary, history, policy, context, evidence, dashboard]
+
+
+def repair_objects():
+    """Replace only the two affected visualizations in an installed dashboard."""
+    return [row for row in detail_objects() if row['id'] in
+            ('soc-ai-chain-investigation-summary-v1', CONTEXT_ID)]
 
 
 def main():
