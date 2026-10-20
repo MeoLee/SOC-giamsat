@@ -1,5 +1,9 @@
 # Tải gói
 
+- **[0.4.7 — Hồ sơ Chain trong Wazuh, tiếng Việt, bấm Chain ID](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.7-Chain-Profile-VI-20261020.zip)**
+- [File Dashboard đầy đủ 9 objects — import trực tiếp](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/soc-ai-chain-profile-v0.4.7.ndjson)
+- [Full source 0.4.7](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.7-Research-20261020.zip)
+
 - **[AI Lab A 0.4.6 — gồm sửa Doctor log rỗng và shard](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.6-Research-Doctor-Fix-20261020.zip)**
 - [Bản vá Doctor cho máy đã cập nhật 0.4.6 Shard-Fix](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.6-Doctor-Fix-20261020.zip)
 - [Hướng dẫn sửa nguồn endpoint mới bị Doctor từ chối](../lab-a/docs/DOCTOR-EMPTY-LOG-FIX-VI.md)

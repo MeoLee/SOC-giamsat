@@ -1,0 +1,25 @@
+{
+  "imported_objects": 9,
+  "reimport_ok": true,
+  "legacy_dashboard_unchanged": true,
+  "native_chain_id_click": true,
+  "one_and_five_stage_details": true,
+  "long_hash_url_command_preserved": true,
+  "future_hypotheses_separate_from_observed": true,
+  "scroll_and_1000px_layout": true,
+  "empty_multiple_and_cross_session_guard": true,
+  "literal_html_not_executed": true,
+  "latest_source_time_after_out_of_order_delivery": true,
+  "browser_queries_replayed": 30,
+  "all_queries_zero_failed_shards": true,
+  "test_shards": 6,
+  "browser_errors": [],
+  "isolated_fixtures_only": true,
+  "real_windows_lab_verified": false,
+  "unit_suite": {
+    "tests": 387,
+    "passed": 385,
+    "skipped_windows_only": 2,
+    "failures": 0
+  }
+}

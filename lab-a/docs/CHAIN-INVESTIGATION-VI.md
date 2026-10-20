@@ -1,5 +1,9 @@
 # Lab A 0.4.6: chi tiết chain và kịch bản năm bước trên Wazuh
 
+**Cập nhật giao diện 0.4.7:** [Hồ sơ Chain mở khi bấm Chain ID](CHAIN-PROFILE-VI.md).
+File NDJSON hiện hành có 9 objects thay cho 7; chỉ import file đầy đủ một lần.
+Các hướng dẫn hai hành động probe và kịch bản dưới đây vẫn áp dụng.
+
 Nếu Doctor từ chối log probe mới tạo còn rỗng, áp dụng
 [Doctor empty-log hotfix](DOCTOR-EMPTY-LOG-FIX-VI.md) rồi mở Live lại.
 

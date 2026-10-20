@@ -146,7 +146,7 @@ def detail_objects():
     """A separate dashboard; importing it cannot overwrite the user's v0.4.5 UI.
 
     The original five saved objects intentionally remain byte-for-byte stable.
-    Expand a row in the evidence search to read long narrative/graph values.
+    Click a Chain ID for the native case reader; expand evidence for raw fields.
     """
     rows = copy.deepcopy(objects())
     identifiers = {
@@ -173,6 +173,10 @@ def detail_objects():
             fields.append({'name': name, 'type': 'string', 'esTypes': ['keyword'],
                            'aggregatable': True, 'searchable': True, 'readFromDocValues': True})
     index['attributes']['fields'] = encoded(fields)
+    from chain_profile import link_template, profile_objects
+    index['attributes']['fieldFormatMap'] = encoded({'data.chain_id': {
+        'id': 'url', 'params': {'urlTemplate': link_template(),
+                              'labelTemplate': '{{value}}', 'openLinkInCurrentTab': True}}})
     # Wazuh's outer timestamp is a millisecond-resolution date. Several case
     # transitions can share that millisecond. event_time is normalized UTC with
     # fixed microsecond precision and stored as a custom keyword by Wazuh.
@@ -204,19 +208,37 @@ def detail_objects():
     evidence['attributes'].update(title='Chain evidence - expand a revision for full text',
         description='Each row is a published revision. Expand the left arrow, then read Table or JSON.',
         columns=DETAIL_COLUMNS)
-    policy_state = json.loads(policy['attributes']['visState'])
-    policy_state['params']['markdown'] += (
-        '\n\n**Investigate:** filter one `data.chain_id`. In **Chain evidence**, '
-        'expand the left arrow and read `data.chain_stage_details`, `data.activity`, '
-        '`data.attack_chain_json` and `data.evidence_file` in Table/JSON. '
-        'This preserves full text when a table cell is shortened. '
-        'A scan has one stage; login does not prove command execution or C2. '
-        'Optional chain-extended adds fixed shell and verified benign-file probes '
-        'in the same SSH connection; this is controlled lab instrumentation, not general endpoint auditing. '
-        '\n\n[ATT&CK techniques](https://attack.mitre.org/) · '
+    # Localize explanatory UI, keeping property keys and table headers intact.
+    translated = {
+        summary['id']: 'Chi tiết Chain — bản cập nhật mới nhất',
+        context['id']: 'Bối cảnh và cách tính điểm — bản cập nhật mới nhất',
+        evidence['id']: 'Bằng chứng Chain — mở dòng để xem toàn bộ field',
+        history['id']: 'Lịch sử cập nhật Chain',
+        policy['id']: 'Cách đọc Chain và mở hồ sơ chi tiết',
+    }
+    for row in (summary, context, evidence, history, policy):
+        row['attributes']['title'] = translated[row['id']]
+        if 'visState' in row['attributes']:
+            state = json.loads(row['attributes']['visState'])
+            state['title'] = row['attributes']['title']
+            row['attributes']['visState'] = encoded(state)
+    state = json.loads(policy['attributes']['visState'])
+    state['params']['markdown'] = (
+        '**Bấm Chain ID để mở Hồ sơ Chain ngay trong Wazuh:** đọc đầy đủ từng bước, '
+        'thời gian, bằng chứng, cách tính điểm và gợi ý điều tra tiếp. '
+        'Hồ sơ mặc định tìm trong 30 ngày; đổi khoảng thời gian nếu cần. '
+        'Các bước gợi ý chưa xảy ra không được cộng vào stage count hoặc risk score.'
+        '\n\n**Điểm ưu tiên điều tra:** scan 40; thử mật khẩu 65; đăng nhập sau chuỗi sai 85; '
+        '+10 nếu có scan trước đó, chặn 95. Medium 40–69, High 70–100. '
+        'Đây là chính sách Lab A, không phải xác suất tấn công. ATT&CK IDs là ứng viên từ bằng chứng; '
+        'chưa xác nhận bị chiếm quyền. Lịch sử là các revision, không phải số cuộc tấn công.'
+        '\n\n**Điều tra:** lọc `data.session_id` hoặc `data.chain_id`. '
+        'Case chỉ có scan thì hiển thị một bước; các failure chưa đủ ngưỡng không thành stage. '
+        'Trong bảng bằng chứng, mở mũi tên trái để xem Table/JSON và đường dẫn `data.evidence_file`.'
+        '\n\n[Nguồn ATT&CK](https://attack.mitre.org/) · '
         '[Attack Flow](https://github.com/center-for-threat-informed-defense/attack-flow) · '
-        '[Wazuh ATT&CK integration](https://documentation.wazuh.com/current/user-manual/ruleset/mitre.html)')
-    policy['attributes']['visState'] = encoded(policy_state)
+        '[Wazuh ATT&CK](https://documentation.wazuh.com/current/user-manual/ruleset/mitre.html)')
+    policy['attributes']['visState'] = encoded(state)
     panel_specs = [
         ('1', 'visualization', policy['id'], 0, 7),
         ('2', 'visualization', summary['id'], 7, 12),
@@ -232,10 +254,11 @@ def detail_objects():
                        'gridData': {'x': 0, 'y': y, 'w': 48, 'h': height, 'i': number}})
         references.append({'name': ref, 'type': kind, 'id': identifier})
     dashboard['references'] = references
-    dashboard['attributes'].update(title='SOC Lab A - Chain Investigation',
-        description='Full evidence narratives, case context and explainable score components.',
+    dashboard['attributes'].update(title='SOC Lab A - Điều tra Chain',
+        description='Hồ sơ bằng chứng, bối cảnh và cách tính điểm ưu tiên điều tra.',
         panelsJSON=encoded(panels))
-    return [index, summary, history, policy, context, evidence, dashboard]
+    return [index, summary, history, policy, context, evidence, dashboard,
+            *profile_objects(latest_source_sort())]
 
 
 def repair_objects():

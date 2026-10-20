@@ -115,7 +115,7 @@ class ChainDashboardTests(unittest.TestCase):
         bundled = Path(__file__).with_name('dashboards')/'soc-ai-chain-investigation.ndjson'
         self.assertEqual(bundled.read_text(), ''.join(encoded(row)+'\n' for row in rows))
         identities = {(r['type'], r['id']) for r in rows}
-        self.assertEqual(len(identities), 7)
+        self.assertEqual(len(identities), 9)
         self.assertTrue(identities.isdisjoint({(r['type'], r['id']) for r in objects()}))
         for row in rows:
             for ref in row['references']:
