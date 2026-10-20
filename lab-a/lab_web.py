@@ -119,11 +119,13 @@ def sql_evidence(event):
         'success_proven':False}
 
 
-def build_web_cases(events, config, digest):
+def build_web_cases(events, config, digest, scans=None):
     from collections import Counter, defaultdict
     from lab_correlation import instant
     groups = defaultdict(list)
-    scans = [e for e in events if e['kind']=='network.possible_recon']
+    if scans is None:
+        from lab_recon import scan_evidence
+        scans=scan_evidence(events,config)
     for e in events:
         if e['kind']=='web.sqli_indicator':
             bucket = int(instant(e['event_time']).timestamp())//300
@@ -137,8 +139,8 @@ def build_web_cases(events, config, digest):
                 and 0<(instant(first['event_time'])-instant(e['event_time'])).total_seconds()<=config['recon_window_seconds']],key=lambda e:e['event_time'])
             stages = []
             if earlier:
-                stages.append({'name':'possible_recon','start_time':earlier[0]['event_time'],
-                    'end_time':earlier[-1]['event_time'],'evidence_ids':[e['event_id'] for e in earlier]})
+                from lab_recon import stage
+                stages.append(stage(earlier))
             stages.append({'name':'possible_web_sqli','start_time':first['event_time'],
                 'end_time':last['event_time'],'evidence_ids':[e['event_id'] for e in cluster],
                 'evidence_count':len(cluster),'success_proven':False})

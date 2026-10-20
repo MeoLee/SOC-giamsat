@@ -198,7 +198,8 @@ class LiveCollector(Collector):
             self.correlator.write(correlation_status, self.state['status'])
         report = {
             'version': 'soc-live-observer/0.4', 'status': status,
-            'software_version': '0.4.3-research',
+            'software_version': '0.4.4-research',
+            'recon_policy': 'distinct_tcp_destination_ports/0.1',
             'complete': status == 'completed', 'mode': 'observe',
             'started_at': self.live_started, 'updated_at': now(),
             'model_directory': self.observer.model_path,
@@ -336,6 +337,11 @@ def main():
                 r'^([^[:space:]]*/)?suricata([[:space:]]|$)'], capture_output=True, timeout=15)
             if check.returncode:
                 raise RuntimeError('Suricata not found in '+sensor+': '+check.stderr.decode(errors='replace'))
+            from lab_recon import SENSOR_RULE_CHECK
+            recon_check=subprocess.run(['docker','exec',sensor,'python3','-c',SENSOR_RULE_CHECK],
+                                       capture_output=True,timeout=15)
+            if recon_check.returncode:
+                raise RuntimeError('Run setup_recon.py before Live: '+recon_check.stderr.decode(errors='replace')[:1000])
         show_runtime(a)
         collector = LiveCollector(a, predictor)
         show_session(collector.folder)

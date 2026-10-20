@@ -140,6 +140,10 @@ class Activities:
         self.raw_rows.append(row)
         if len(self.raw_rows) >= 128:
             self.flush_raw()
+        # These are collection observations, not independent attack signatures.
+        # Keep raw evidence; only the distinct-port correlator creates a case.
+        if kind=='alert' and str(details.get('signature_id')) in ('9900001','9900003'):
+            return
         # Protocol metadata is in JSONL; alerts appear immediately in the console.
         if kind == 'alert':
             print('[SENSOR]', safe(row['event_time']), safe(row['source_ip']), '->', safe(row['target_ip']),
@@ -219,6 +223,13 @@ class Activities:
                     sample_request_target=case.get('sample_request_target'),
                     evidence_providers=case.get('evidence_providers', []),
                     exploitation_success_proven=False)
+            recon=next((s for s in case['stages'] if s['name']=='possible_recon'),None)
+            if recon:
+                row.update(recon_detection_method=recon['detection_method'],
+                    distinct_destination_ports=recon['distinct_destination_ports'],
+                    destination_port_sample=recon['destination_port_sample'],
+                    port_threshold=recon['port_threshold'],
+                    port_window_seconds=recon['port_window_seconds'])
             append(self.path, [row])
             print('[CORRELATION]', safe(case['source_ip']), '->', safe(case['target_host']),
                   safe(case['status']), safe(row['stages']), flush=True)

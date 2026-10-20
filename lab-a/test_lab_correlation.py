@@ -23,13 +23,25 @@ def recon(seconds=0, fid=999, dst='172.20.0.3'):
         'alert': {'signature_id': 9900001}}
 
 
+def syn(seconds=0,port=1,fid=None,dst='172.20.0.3'):
+    return {**recon(seconds,fid if fid is not None else port,dst),
+        'proto':'TCP','src_port':44000+port,'dest_port':port,
+        'alert':{'signature_id':9900003,'signature':'SOC LAB TCP SYN observation','severity':3}}
+
+
+def scan(seconds=0,dst='172.20.0.3'):
+    return [normalized('suricata-eve.jsonl',json.dumps(syn(seconds,port,dst=dst)).encode())
+            for port in range(1,21)]
+
+
 def normalized(source, line):
     event = normalize_line(source, line, DEFAULTS)
     return {**event, 'event_id': 'event:'+digest(event), 'source_refs': []}
 
 
-def sequence(success_time=20, success_user='labuser', success_ip='172.20.0.4', host='ubuntu-endpoint'):
-    events = [normalized('suricata-eve.jsonl', json.dumps(recon()).encode())]
+def sequence(success_time=20, success_user='labuser', success_ip='172.20.0.4', host='ubuntu-endpoint',
+             recon_time=0,recon_dst='172.20.0.3'):
+    events = scan(recon_time,recon_dst)
     events += [normalized('ubuntu-auth.log', auth(t, host=host)) for t in range(10, 18)]
     events.append(normalized('ubuntu-auth.log', auth(success_time, 'Accepted', success_user, success_ip, host)))
     return events
@@ -91,20 +103,17 @@ class CorrelationTests(unittest.TestCase):
         self.assertNotIn('possible_recon', [s['name'] for s in full['stages']])
 
     def test_wrong_scan_target_not_linked(self):
-        events = sequence()
-        events[0] = normalized('suricata-eve.jsonl', json.dumps(recon(dst='172.20.0.99')).encode())
+        events = sequence(recon_dst='172.20.0.99')
         cases = build_cases(events, DEFAULTS)
         self.assertEqual(len(cases), 2)
 
     def test_recon_after_failures_does_not_become_preceding_stage(self):
-        events = sequence()
-        events[0] = normalized('suricata-eve.jsonl', json.dumps(recon(30)).encode())
+        events = sequence(recon_time=30)
         full = next(c for c in build_cases(events, DEFAULTS) if c['username'])
         self.assertEqual(len(full['stages']), 2)
 
     def test_scan_outside_ten_minute_window_not_linked(self):
-        events = sequence()
-        events[0] = normalized('suricata-eve.jsonl', json.dumps(recon(-591)).encode())
+        events = sequence(recon_time=-591)
         full = next(c for c in build_cases(events, DEFAULTS) if c['username'])
         self.assertEqual(len(full['stages']), 2)
 
@@ -151,10 +160,10 @@ class CorrelationTests(unittest.TestCase):
         self.assertEqual(len(next(iter(engine.events.values()))['source_refs']), 2)
 
     def test_two_scans_grouped_without_thousands_of_ai_alerts(self):
-        events = [normalized('suricata-eve.jsonl', json.dumps(recon(t, fid=t)).encode()) for t in (0, 30)]
+        events = scan(0)+scan(30)
         cases = build_cases(events, DEFAULTS)
         self.assertEqual(len(cases), 1)
-        self.assertEqual(len(cases[0]['stages'][0]['evidence_ids']), 2)
+        self.assertEqual(len(cases[0]['stages'][0]['evidence_ids']), 40)
 
     def test_mlp_label_does_not_create_auth_evidence(self):
         prediction = {'decision': 'possible_attack', 'predicted_label': 'SSH-Patator'}

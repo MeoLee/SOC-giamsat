@@ -18,8 +18,8 @@ from soc_ai.common import read_json, write_json
 SCENARIOS = {
     'normal-http':('12 ordinary GET requests, about one per second', ['119210','119207']),
     'normal-ssh':('Five successful SSH sessions, 5 seconds each', ['119208','119207']),
-    'port-scan':('One TCP connect scan of ports 1..32, at most 5 probes/second', ['119209','119203']),
-    'single-port':('24 TCP connections to SSH only; no password attempts', ['119209']),
+    'port-scan':('One TCP connect scan of ports 1..32, at most 5 probes/second', ['119203']),
+    'single-port':('24 TCP connections to SSH only; no password attempts; no recon case expected', []),
     'ssh-negative':('One intentionally wrong password then one interactive correct login', ['119208']),
     'ssh-burst':('Eight intentionally wrong passwords to a dedicated test account', ['119204']),
     'ssh-success':('One correct interactive login; standalone control, not a full chain', ['119208']),
@@ -27,6 +27,8 @@ SCENARIOS = {
     'web-sqli':('One SQL syntax indicator GET against DVWA; exploitation is not asserted', ['119209','119206']),
     'http-burst':('At most 50 GETs, at most 5 per second, 10-second start window; not a DDoS label', ['119210']),
 }
+RECON_CONTROLS=frozenset(('normal-http','http-burst','single-port','normal-ssh',
+                          'ssh-negative','ssh-burst','ssh-success','web-sqli'))
 
 
 def now():
@@ -138,7 +140,8 @@ def main():
     if a.action=='plan':
         print(json.dumps({'scenario':a.scenario,'description':description,
             'expected_rule_ids':ids,'target':a.target,'username':a.username,
-            'note':'Expectations are operational checks, not training labels. Single-port may trigger SYN rules but must not be called distinct-port scanning.'},indent=2))
+            'expected_absent_rule_ids':['119203'] if a.scenario in RECON_CONTROLS else [],
+            'note':'Expectations are operational checks, not training labels. Single-port and HTTP burst must not produce a distinct-port recon case.'},indent=2))
         return 0
     if not a.capture or not a.output: p.error('run requires --capture and --output')
     if a.output.exists(): p.error('Output exists; choose a new evidence directory')
@@ -147,6 +150,7 @@ def main():
     a.output.mkdir(parents=True,exist_ok=False)
     report={'schema_version':'soc-operational-scenario/0.1','scenario':a.scenario,
         'description':description,'expected_rule_ids':ids,'scope':scope,'username':a.username,
+        'expected_absent_rule_ids':['119203'] if a.scenario in RECON_CONTROLS else [],
         'capture_session_id':capture['session_id'],'capture_directory':str(a.capture),
         'model_weights_sha256':ai['model_weights_sha256'],'started_at':now(),
         'complete':False,'training_label':None,'steps':[]}

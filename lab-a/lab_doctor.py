@@ -62,6 +62,9 @@ def diagnose(config_path, model=None, runtime=False, bridge=False, runner=None):
         for sensor in sorted({s['container'] for s in config['sources'] if s['kind'] == 'eve'}):
             check('suricata_process:' + sensor, lambda sensor=sensor:
                   docker(['exec', sensor, 'pgrep', '-f', r'^([^[:space:]]*/)?suricata([[:space:]]|$)']))
+            from lab_recon import SENSOR_RULE_CHECK
+            check('recon_collection_rule:' + sensor,lambda sensor=sensor:
+                  json.loads(docker(['exec',sensor,'python3','-c',SENSOR_RULE_CHECK])))
         if bridge:
             def bridge_ready():
                 ready = json.loads(docker(['exec', config['wazuh_manager'], 'cat',

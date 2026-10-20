@@ -21,7 +21,7 @@ AUTH = re.compile(r'^(\S+)\s+(\S+)\s+sshd(?:-session)?(?:\[\d+\])?:\s+'
 DEFAULTS = {'protected_host': 'ubuntu-endpoint', 'protected_ip': '172.20.0.3',
     'agent_id': '001', 'failure_threshold': 8, 'failure_window_seconds': 60,
     'success_window_seconds': 300, 'recon_window_seconds': 600,
-    'max_events': 50000}
+    'max_events': 50000, 'recon_port_threshold':20, 'recon_port_window_seconds':10}
 
 
 def instant(value):
@@ -82,7 +82,7 @@ def ip_host(ip, config):
     return (config.get('protected_host') if ip == config.get('protected_ip') else 'ip:' + ip) if 'assets' not in config else 'ip:' + ip
 
 
-def recon_event(event, config):
+def recon_event(event, config, sensor_id=None):
     if not isinstance(event, dict):
         raise ValueError('Suricata event must be an object')
     if event.get('event_type') != 'alert':
@@ -91,7 +91,10 @@ def recon_event(event, config):
     if not isinstance(alert, dict):
         raise ValueError('Suricata alert must be an object')
     sid = str(alert.get('signature_id'))
-    if sid not in ('9900001','9900101','9900102'): return None
+    if sid not in ('9900001','9900003','9900101','9900102'): return None
+    if sid=='9900003':
+        from lab_recon import observation
+        return observation(event,sensor_id or config['protected_host'],ip_host(event['dest_ip'],config))
     from soc_ai.flow import identifier, port
     def event_port(value):
         # Wazuh's JSON decoder may represent an EVE port as a decimal string.
@@ -104,7 +107,7 @@ def recon_event(event, config):
     dest = str(ipaddress.ip_address(event['dest_ip']))
     # Destination identity, not the Wazuh agent's management-network address.
     host = ip_host(dest, config)
-    normalized = {'kind': 'network.possible_recon', 'event_time': stamp(instant(event['timestamp'])),
+    normalized = {'kind': 'network.syn_rate_indicator', 'event_time': stamp(instant(event['timestamp'])),
         'target_host': host, 'target_ip': dest,
         'source_ip': str(ipaddress.ip_address(event['src_ip'])),
         'source_port': event_port(event.get('src_port')), 'destination_port': event_port(event.get('dest_port')),
@@ -136,7 +139,8 @@ def normalize_line(source, raw, config):
     if not isinstance(wrapper, dict):
         raise ValueError('Expected event object')
     if kind in ('eve', 'suricata-eve.jsonl'):
-        return recon_event(wrapper, config)
+        origin=config.get('source_origins',{}).get(source,{})
+        return recon_event(wrapper, config, origin.get('source_container'))
     data = wrapper.get('data')
     if isinstance(data, dict) and data.get('soc_ai_producer') == 'soc-ai-live':
         return None
@@ -157,12 +161,12 @@ def normalize_line(source, raw, config):
             raise ValueError('Nested Wazuh JSON must be an object')
         if nested.get('soc_ai_producer') == 'soc-ai-live':
             return None
-        return recon_event(nested, config)
+        return recon_event(nested, config, agent.get('name'))
     # Some Wazuh exports retain decoded EVE under data but omit full_log.
     # Use the native EVE timestamp/fields; wrapper timestamp and agent.ip are
     # transport metadata and must not replace target or event identity.
     if isinstance(data, dict) and data.get('event_type') == 'alert':
-        return recon_event(data, config)
+        return recon_event(data, config, agent.get('name'))
     # A Wazuh auth alert is another view of the original auth event, not
     # an additional failed attempt. Correlation does not trust 119103's TTL.
     from lab_web import apache_combined, sql_evidence
@@ -185,8 +189,8 @@ def case_for(burst, scans, success=None, config=None):
     earlier.sort(key=lambda e: (e['event_time'], e['event_id']))
     stages = []
     if earlier:
-        stages.append({'name': 'possible_recon', 'start_time': earlier[0]['event_time'],
-            'end_time': earlier[-1]['event_time'], 'evidence_ids': [e['event_id'] for e in earlier]})
+        from lab_recon import stage
+        stages.append(stage(earlier))
     stages.append({'name': 'repeated_auth_failures', 'start_time': failures[0]['event_time'],
         'end_time': failures[-1]['event_time'], 'evidence_ids': [e['event_id'] for e in failures],
         'failure_count': len(failures), 'threshold': config['failure_threshold'],
@@ -208,7 +212,8 @@ def case_for(burst, scans, success=None, config=None):
 
 
 def build_cases(events, config):
-    scans = [e for e in events if e['kind'] == 'network.possible_recon']
+    from lab_recon import scan_evidence
+    scans = scan_evidence(events,config)
     groups = defaultdict(list)
     for e in events:
         if e['kind'].startswith('auth.'):
@@ -242,14 +247,14 @@ def build_cases(events, config):
                     # A later burst must have its own failures, not reuse this one.
                     recent.clear()
     from lab_web import build_web_cases
-    for case in build_web_cases(events, config, digest):
+    for case in build_web_cases(events, config, digest, scans=scans):
         cases[case['case_id']] = case
     consumed_scans = {eid for case in cases.values() for s in case['stages']
                       if s['name'] == 'possible_recon' for eid in s['evidence_ids']}
     scan_groups = defaultdict(list)
     for e in scans:
         if e['event_id'] not in consumed_scans:
-            scan_groups[(e['target_host'], e['source_ip'])].append(e)
+            scan_groups[(e['target_host'], e['source_ip'],e['sensor_id'],e['target_ip'])].append(e)
     for key, timeline in scan_groups.items():
         cluster = []
         for e in sorted(timeline, key=lambda e: (e['event_time'], e['event_id'])):
@@ -267,14 +272,15 @@ def build_cases(events, config):
 
 
 def add_scan_case(cases, key, cluster):
+    from lab_recon import stage
+    evidence_stage=stage(cluster)
     cid = 'case:' + digest([key, cluster[0]['event_id']])
     cases[cid] = {'schema_version': 'soc-correlation-case/0.1', 'case_id': cid,
         'target_host': key[0], 'target_ip': cluster[0]['target_ip'], 'source_ip': key[1],
-        'username': None, 'status': 'possible_recon', 'first_seen': cluster[0]['event_time'],
+        'username': None, 'status': 'possible_recon', 'first_seen': evidence_stage['start_time'],
         'last_seen': cluster[-1]['event_time'], 'confirmed_compromise': False, 'training_label': None,
-        'stages': [{'name': 'possible_recon', 'start_time': cluster[0]['event_time'],
-            'end_time': cluster[-1]['event_time'], 'evidence_ids': [e['event_id'] for e in cluster]}],
-        'explanation': 'Reconnaissance alerts grouped by source and target within the configured window.'}
+        'stages': [evidence_stage],
+        'explanation': 'Distinct TCP destination ports observed from the same source to the same target at one sensor within a bounded window. Authorized scanning can produce the same pattern.'}
 
 
 class Correlator:
@@ -283,9 +289,11 @@ class Correlator:
         self.directory = Path(output_directory)
         self.config = {**DEFAULTS, **(config or {})}
         for key in ('failure_threshold', 'failure_window_seconds', 'success_window_seconds',
-                    'recon_window_seconds', 'max_events'):
+                    'recon_window_seconds', 'max_events','recon_port_threshold','recon_port_window_seconds'):
             if type(self.config[key]) is not int or self.config[key] < 1:
                 raise ValueError('Invalid correlation configuration: ' + key)
+        if not 2<=self.config['recon_port_threshold']<=65536 or self.config['recon_port_window_seconds']>3600:
+            raise ValueError('Invalid reconnaissance port/window configuration')
         self.config['protected_ip'] = str(ipaddress.ip_address(self.config['protected_ip']))
         from live_config import validated_assets, output_name
         if 'assets' in self.config:

@@ -9,7 +9,7 @@ from lab_correlation import Correlator, DEFAULTS, normalize_line
 from lab_doctor import diagnose
 from live_config import load_config
 from soc_ai.flow import FEATURE_HASH, identifier, normalize
-from test_lab_correlation import auth, recon
+from test_lab_correlation import auth, recon, syn
 from test_lab_live import flow
 
 
@@ -107,13 +107,13 @@ class ContractTests(unittest.TestCase):
             stream.write(b'\n'.join(auth(t) for t in range(12, 18)) + b'\n')
         engine.consume()
         self.assertEqual(engine.cases[0]['status'], 'suspicious_login_sequence')
-        native = recon()
-        wrapper = {'agent': {'id': '001', 'name': 'ubuntu-endpoint'}, 'data': native}
-        (self.root / 'eve.jsonl').write_text(json.dumps(native) + '\n')
-        (self.root / 'wazuh.jsonl').write_text(json.dumps(wrapper) + '\n')
+        probes=[syn(port=port) for port in range(1,21)]
+        (self.root / 'eve.jsonl').write_text(''.join(json.dumps(e)+'\n' for e in probes))
+        (self.root / 'wazuh.jsonl').write_text(''.join(json.dumps({
+            'agent':{'id':'001','name':'ubuntu-endpoint'},'data':e})+'\n' for e in probes))
         engine.consume(); engine.consume()
-        self.assertEqual(len(engine.events), 10)
-        self.assertEqual(engine.counts['duplicate_views'], 1)
+        self.assertEqual(len(engine.events), 29)
+        self.assertEqual(engine.counts['duplicate_views'], 20)
         self.assertEqual(len(engine.cases), 1)
         self.assertEqual([s['name'] for s in engine.cases[0]['stages']],
                          ['possible_recon', 'repeated_auth_failures', 'auth_success_after_failures'])
@@ -138,9 +138,9 @@ class ContractTests(unittest.TestCase):
             return SimpleNamespace(returncode=1, stdout=b'', stderr=b'missing')
         report = diagnose(self.config_file({}), runtime=True, bridge=True, runner=runner)
         self.assertFalse(report['checks_passed'])
-        self.assertEqual(len(report['checks']), 6)
+        self.assertEqual(len(report['checks']), 7)
         self.assertTrue(all(c[0:2] == ['docker', 'exec'] for c in calls))
-        self.assertEqual({c[3] for c in calls}, {'stat', 'pgrep', 'cat'})
+        self.assertEqual({c[3] for c in calls}, {'stat', 'pgrep', 'python3', 'cat'})
 
 
 if __name__ == '__main__':

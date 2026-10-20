@@ -32,7 +32,7 @@ class RealtimeTests(unittest.TestCase):
 
     def test_signature_is_published_before_any_completed_flow(self):
         acts=Activities(self.root,self.pub)
-        event={**recon(),'alert':{'signature_id':9900001,'signature':'lab SYN indicator','severity':2}}
+        event={**recon(),'alert':{'signature_id':9900101,'signature':'lab SQL indicator','severity':2}}
         with contextlib.redirect_stdout(io.StringIO()):
             acts.raw_event(event,'suricata-eve.jsonl','ubuntu-endpoint')
             acts.raw_event(event,'suricata-eve.jsonl','ubuntu-endpoint')

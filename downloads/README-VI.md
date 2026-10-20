@@ -1,6 +1,11 @@
 # Tải gói
 
-- **[AI Lab A 0.4.3 — gồm sửa Live SQLi và runner SSH ngày 20/10](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.3-Research-20261020-SQLi-Fix.zip)**
+- **[AI Lab A 0.4.4 — sửa báo nhầm reconnaissance khi HTTP burst](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Research-20261020.zip)**
+- [Bản vá 0.4.3 lên 0.4.4, gồm sửa SSH/SQLi trước đó](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Recon-Fix-20261020.zip)
+- [Hướng dẫn cài rule và kiểm thử HTTP burst/quét cổng](../lab-a/docs/RECON-FIX-VI.md)
+- [SHA256 full source 0.4.4](SOC-AI-Lab-A-v0.4.4-Research-20261020.zip.sha256)
+- [SHA256 bản vá 0.4.4](SOC-AI-Lab-A-v0.4.4-Recon-Fix-20261020.zip.sha256)
+- [Full source 0.4.3 gồm sửa Live SQLi](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.3-Research-20261020-SQLi-Fix.zip)
 - [Bản vá Live SQLi cho máy đã có 0.4.3, gồm cả sửa runner SSH](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.3-Live-SQLi-Fix-20261020.zip)
 - [Hướng dẫn sửa Live dừng khi ghép HTTP status](../lab-a/docs/LIVE-SQLI-FIX-VI.md)
 - [SHA256 full source gồm sửa Live SQLi](SOC-AI-Lab-A-v0.4.3-Research-20261020-SQLi-Fix.zip.sha256)

@@ -1,0 +1,2 @@
+# Collection evidence only. AI correlation counts distinct destination ports.
+alert tcp any any -> any any (msg:"SOC LAB TCP SYN observation"; flags:S; flow:stateless; classtype:misc-activity; priority:3; sid:9900003; rev:1;)

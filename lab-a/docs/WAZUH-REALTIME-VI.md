@@ -1,5 +1,9 @@
 # Kiểm thử AI → Wazuh Dashboard theo thời gian thực
 
+**Cập nhật 0.4.4:** xem [sửa báo nhầm SYN burst](RECON-FIX-VI.md). Sau khi cập
+nhật source, chạy setup_recon.py trước Live. Port scan dùng 119203 dựa trên số
+cổng khác nhau; SYN observations không còn được bridge đẩy thành 119209.
+
 Bản cập nhật 0.4.3 không cần train lại. Nó dùng candidate Quality hiện có và bổ
 sung vận hành: điểm ưu tiên, bằng chứng sensor gửi sớm, hoạt động bình thường
 ở mức thông tin, attack chain theo sự kiện và công cụ trace đường gửi. Capture
@@ -28,13 +32,13 @@ manager logcollector → analysisd → alerts.json → Filebeat → indexer → 
 ## 2. Cài cập nhật source và bridge
 
 Giữ model/data/venv hiện có. Dừng Live cũ, chờ đóng phiên; không mở hai watcher
-cùng thu một lab để tránh nhân đôi thông báo. Bản vá source lấy chênh lệch từ
-0.4.2, gồm bản dashboard Quality; người đang ở 0.4.1 vẫn phải cài dashboard patch
-trước hoặc dùng full 0.4.3. Sao lưu source trước khi giải nén đè.
+cùng thu một lab để tránh nhân đôi thông báo. Máy đã có 0.4.3 dùng bản vá 0.4.4
+bên dưới, gồm cả các sửa SSH/SQLi trước đó. Máy ở 0.4.2 trở về trước dùng full
+source 0.4.4 theo hướng dẫn cài đặt. Sao lưu source/cấu hình trước khi giải nén.
 
-- [Bản vá Wazuh](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4-Wazuh-Realtime-20261019.zip)
-- [SHA256 bản vá](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4-Wazuh-Realtime-20261019.zip.sha256)
-- [Full source 0.4.3](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.3-Research-20261019.zip)
+- [Bản vá 0.4.3 lên 0.4.4](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Recon-Fix-20261020.zip)
+- [SHA256 bản vá](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Recon-Fix-20261020.zip.sha256)
+- [Full source 0.4.4](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Research-20261020.zip)
 
 Trong **Windows PowerShell trên máy vật lý**:
 
@@ -46,6 +50,8 @@ $manager = 'single-node-wazuh.manager-1'
 $model = 'E:\SOC-Lab\AI\runs\mlp04-quality-20261019-232507'
 & $py .\setup_wazuh.py --manager $manager
 if ($LASTEXITCODE -ne 0) { throw 'Bridge chưa cài được; giữ toàn bộ lỗi.' }
+& $py .\setup_recon.py --container ubuntu-endpoint
+if ($LASTEXITCODE -ne 0) { throw 'Rule thu SYN chưa cài được; giữ toàn bộ lỗi.' }
 ```
 
 Installer thêm JSON localfile và rule riêng, kiểm tra trùng ID, validate config,
@@ -136,8 +142,8 @@ Không chạy các kịch bản khác song song trong cùng phiên chẩn đoán
 | `normal-http` | 12 GET health/login, khoảng 1 request/giây | 119210 HTTP observation; 119207 sau completed flow; ghi mọi false positive nếu có |
 | `normal-ssh` | 5 login đúng, chạy whoami/date/uptime, giữ 5 giây rồi tự thoát | 119208 auth success; 119207/119202 theo quyết định MLP; không có 119204/119205 từ success-only |
 | `ssh-negative` | 1 lần sai rồi 1 lần đúng | 119208; không đủ burst 8 nên không tạo chain password-guessing trong capture sạch |
-| `port-scan` | TCP connect cổng 1–32, tối đa 5 probe/giây | 119209 chữ ký sensor và 119203 recon nếu rule đang nạp khớp; MLP có thể out-of-scope ở flow ngắn |
-| `single-port` | 24 kết nối cổng 22, không thử password | Context distinct-port không được gọi là multi-port scan; SYN rule cũ có thể báo vì chỉ đếm SYN — ghi hạn chế đó |
+| `port-scan` | TCP connect cổng 1–32, tối đa 5 probe/giây | 119203 khi ≥20 cổng đích khác nhau/10 giây; MLP có thể out-of-scope ở flow ngắn |
+| `single-port` | 24 kết nối cổng 22, không thử password | Không tạo 119203; kiểm tra coverage SYN thật để xác nhận ca âm tính |
 | `ssh-burst` | 8 mật khẩu cố ý sai, một tài khoản test | Auth log thật có ≥8 failures/60 giây; 119204 và risk 65 khi không có recon trước |
 | `ssh-success` | 1 login đúng | Control 119208 trong phiên sạch; không tự thành 119205 |
 | `chain` | Scan → 8 lần sai → nhập đúng một lần | 119203/119204 → 119205; attack_chain có recon → failures → success; risk tối đa 95, compromise vẫn false |

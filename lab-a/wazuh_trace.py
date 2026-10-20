@@ -103,6 +103,42 @@ def auth_outcomes(capture, operator):
             'events':ordered}
 
 
+def recon_coverage(capture,operator):
+    """Normalized, deduplicated SYN evidence in the operator's actual scope."""
+    from lab_recon import instant, scan_evidence
+    path=capture/'correlation-events.jsonl'
+    scenario=operator['scenario']
+    minimum={'normal-http':12,'single-port':24,'port-scan':32,'chain':32,
+             'normal-ssh':5,'ssh-negative':2,'ssh-burst':8,'ssh-success':1,'web-sqli':1}.get(scenario)
+    if scenario=='http-burst':minimum=operator.get('http_requests')
+    events={};invalid=0
+    if path.exists():
+        start,end=instant(operator['started_at']),instant(operator['ended_at'])
+        with path.open(encoding='utf-8') as stream:
+            for line in stream:
+                try:
+                    row=json.loads(line)
+                    if not isinstance(row,dict):raise ValueError('Normalized record must be an object')
+                    if row.get('kind')!='network.tcp_syn':continue
+                    if (row['source_ip']!=operator['scope']['source_ip'] or
+                            row['target_ip']!=operator['scope']['target_ip'] or
+                            not start<=instant(row['event_time'])<=end):continue
+                    events[row['event_id']]=row
+                except (ValueError,KeyError,TypeError):invalid+=1
+    connections={(e['sensor_id'],e['flow_id'],e['source_ip'],e['source_port'],
+                  e['target_ip'],e['destination_port']) for e in events.values()}
+    config_path=capture/'correlation-cases.json'
+    config=read_json(config_path).get('config',{}) if config_path.exists() else {}
+    sufficient=bool(operator.get('complete') and type(minimum) is int and minimum>0
+                    and len(connections)>=minimum and not invalid)
+    return {'normalized_syn_observations':len(events),'observed_connections':len(connections),
+            'expected_minimum_connections':minimum,'coverage_sufficient':sufficient,
+            'distinct_destination_ports':len({e['destination_port'] for e in events.values()}),
+            'qualifying_port_sweep_windows':len(scan_evidence(list(events.values()),config)),
+            'invalid_normalized_records':invalid,'source_clock_alignment_required':True,
+            'packet_completeness_established':False}
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     sub=p.add_subparsers(dest='command',required=True)
@@ -142,10 +178,16 @@ def main():
             report['expected_rule_ids']=operator['expected_rule_ids']
             report['missing_expected_rule_ids']=[i for i in operator['expected_rule_ids']
                                                 if i not in report['alert_rule_counts']]
+            report['expected_absent_rule_ids']=operator.get('expected_absent_rule_ids',[])
+            report['unexpected_rule_ids']=[i for i in report['expected_absent_rule_ids']
+                                           if i in report['alert_rule_counts']]
+            report['recon_observation_coverage']=recon_coverage(a.capture,operator)
             if 'ssh' in operator['scenario'] or operator['scenario']=='chain':
                 report['raw_auth_outcomes']=auth_outcomes(a.capture,operator)
             report['expectations_are_not_training_labels']=True
             report['negative_result_coverage_complete']=bool(capture['closed'] and not result['tail_limited'])
+            if report['expected_absent_rule_ids']:
+                report['negative_result_coverage_complete'] &= report['recon_observation_coverage']['coverage_sufficient']
         code=0 if alerts else 2
     else:
         started=time.monotonic()
