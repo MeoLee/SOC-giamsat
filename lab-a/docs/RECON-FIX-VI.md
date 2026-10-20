@@ -68,6 +68,33 @@ mới có mặt trước khi chạy, không coi việc đó là bằng chứng c
 
 Không phải train lại hoặc chạy setup_wazuh.py: bridge hiện tại đã có rule 119203.
 
+## Nếu PCAP báo sai số lượng SYN
+
+Nếu 16 unit test đạt nhưng installer dừng ở
+`PCAP SYN count differs from known generated attempts`, rule đang chạy chưa
+được thay: lỗi xảy ra trước backup, atomic replace và SIGUSR2. Không bỏ điều
+kiện kiểm tra này hoặc coi đây là cài thành công. Thông báo cũ chưa chỉ rõ nhóm
+scan/HTTP/single-port nào bị lệch và số lượng thực tế, nên chưa đủ để kết luận
+nguyên nhân trên máy người dùng.
+
+Helper bổ sung `diagnose_recon.py` chạy cùng PCAP và candidate rule với YAML
+hiện tại, chỉ trong thư mục tạm. Nó không gọi installer thay rule, không gửi
+signal/restart và không phát traffic tới lab. Chạy sau khi tải helper vào cùng
+thư mục source 0.4.4:
+
+```powershell
+& $py .\diagnose_recon.py --container ubuntu-endpoint --output 'E:\SOC-Lab\AI\wazuh-tests\recon-pcap-diagnostic.json'
+if ($LASTEXITCODE -ne 0) { throw 'Chẩn đoán chưa hoàn tất; giữ output và JSON nếu có.' }
+```
+
+JSON cho biết từng nhóm kỳ vọng 32/33/24 kết nối, số alert, số kết nối duy nhất,
+cổng thiếu, kết nối lặp và số alert theo từng file EVE. Chẳng hạn hai EVE output
+cùng ghi alert có thể làm số bản ghi gấp đôi trong khi số kết nối giữ nguyên;
+đây chỉ là một khả năng để phân biệt bằng dữ liệu, không phải kết luận cho lab.
+`live_rules_unchanged=true` và `reload_requested=false` xác nhận helper không
+cài rule. Exit code 0 chỉ cho biết đã thu chẩn đoán; phải đọc các số trong JSON.
+Không cần gửi model, mật khẩu hoặc toàn bộ EVE thật để chẩn đoán PCAP mẫu này.
+
 ## Kiểm thử lại hai ca độc lập
 
 PowerShell A, bắt đầu HTTP burst:
