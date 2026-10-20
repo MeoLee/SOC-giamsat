@@ -38,6 +38,21 @@ def integer(value, minimum, maximum, field):
     return int(value)
 
 
+def normalize_http_status(value):
+    """Canonical HTTP status for native EVE and Wazuh-decoded views.
+
+    Missing status stays unknown. Numeric strings are common in Wazuh, but
+    booleans, floats and malformed values must not become invented statuses.
+    """
+    if value is None:
+        return None
+    if isinstance(value,str) and re.fullmatch(r'[0-9]{3}',value):
+        value=int(value)
+    if type(value) is not int or not 100 <= value <= 599:
+        raise ValueError('Invalid HTTP status')
+    return value
+
+
 def analyze_target(target):
     if len(target) > 65536: raise ValueError('HTTP request target too long')
     query = target.partition('?')[2]
@@ -91,7 +106,7 @@ def apache_combined(raw, host, target_ip=None):
         'event_time':stamp(t), 'available_time':None, 'evidence_provider':'wazuh_apache',
         'target_host':host, 'source_ip':str(ipaddress.ip_address(src)), 'source_port':None,
         'target_ip':target_ip, 'destination_port':None, 'http_method':method,
-        'http_status':int(status), 'response_body_bytes':int(size) if size!='-' else None,
+        'http_status':normalize_http_status(status), 'response_body_bytes':int(size) if size!='-' else None,
         'duration_us':None, **analyze_target(target)}
 
 
@@ -105,7 +120,7 @@ def sql_evidence(event):
 
 
 def build_web_cases(events, config, digest):
-    from collections import defaultdict
+    from collections import Counter, defaultdict
     from lab_correlation import instant
     groups = defaultdict(list)
     scans = [e for e in events if e['kind']=='network.possible_recon']
@@ -127,12 +142,16 @@ def build_web_cases(events, config, digest):
             stages.append({'name':'possible_web_sqli','start_time':first['event_time'],
                 'end_time':last['event_time'],'evidence_ids':[e['event_id'] for e in cluster],
                 'evidence_count':len(cluster),'success_proven':False})
+            # Also support replay of older normalized records containing strings.
+            # Counts describe evidence views, not unique HTTP requests.
+            statuses=Counter(normalize_http_status(e.get('http_status')) for e in cluster)
+            statuses.pop(None,None)
             result.append({'schema_version':'soc-correlation-case/0.1',
                 'case_id':'case:'+digest(['web',host,src,bucket]),
                 'target_host':host,'target_ip':first['target_ip'],'source_ip':src,'username':None,
                 'status':'possible_web_sqli','first_seen':stages[0]['start_time'],'last_seen':last['event_time'],
                 'stages':stages,'confirmed_compromise':False,'training_label':None,
-                'http_status_counts':{str(code):sum(e.get('http_status')==code for e in cluster) for code in sorted({e.get('http_status') for e in cluster if e.get('http_status') is not None})},
+                'http_status_counts':{str(code):statuses[code] for code in sorted(statuses)},
                 'evidence_providers':sorted({e.get('evidence_provider','unknown') for e in cluster}),
                 'sample_request_target':next((e.get('request_target') for e in cluster if e.get('request_target')),None),
                 'explanation':'HTTP SQL syntax indicators observed. Rule/heuristic evidence, not an MLP SQLi prediction; exploitation success is not proven.'})

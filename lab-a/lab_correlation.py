@@ -110,12 +110,14 @@ def recon_event(event, config):
         'source_port': event_port(event.get('src_port')), 'destination_port': event_port(event.get('dest_port')),
         'flow_id': flow_id, 'signature_id': sid}
     if sid != '9900001':
+        from lab_web import normalize_http_status
         http = event.get('http', {})
         if not isinstance(http, dict):
             raise ValueError('Suricata HTTP must be an object')
         normalized.update(kind='web.sqli_indicator', evidence_provider='suricata',
             request_target=http.get('url'), http_method=http.get('http_method'),
-            http_status=http.get('status'), tx_id=identifier(event.get('tx_id')), success_proven=False,
+            http_status=normalize_http_status(http.get('status')),
+            tx_id=identifier(event.get('tx_id')), success_proven=False,
             sql_indicators=['sql_union_select'])
     return normalized
 

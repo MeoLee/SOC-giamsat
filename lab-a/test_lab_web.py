@@ -4,7 +4,7 @@ import struct
 import tempfile
 import unittest
 
-from lab_web import analyze_target, apache_tsv, apache_combined
+from lab_web import analyze_target, apache_tsv, apache_combined, normalize_http_status
 from lab_correlation import DEFAULTS, Correlator, normalize_line, build_cases, digest
 from configure_web_live import updated_config
 from setup_suricata_web import merge_rules, test_pcap, remote_script
@@ -102,6 +102,74 @@ class WebTests(unittest.TestCase):
         engine.process('wazuh.jsonl',json.dumps(wrapper).encode())
         self.assertEqual(len(engine.events),1)
         self.assertEqual(engine.counts['duplicate_views'],1)
+
+    def test_late_wazuh_string_status_does_not_interrupt_sql_correlation(self):
+        engine=Correlator(self.root,self.root/'out',self.config)
+        event={'timestamp':apache_tsv(tsv())['event_time'],'event_type':'alert',
+            'flow_id':1,'tx_id':0,'src_ip':'172.20.0.4','dest_ip':'172.20.0.3',
+            'src_port':41000,'dest_port':80,'alert':{'signature_id':9900101},
+            'http':{'url':PAYLOAD,'status':302,'http_method':'GET'}}
+        (self.root/'eve.jsonl').write_text(json.dumps(event)+'\n')
+        (self.root/'apache.tsv').write_bytes(tsv(status=302))
+        engine.consume()
+        self.assertEqual(len(engine.cases),1)
+        # Wazuh's decoded view can arrive after the native alert and Apache.
+        decoded=json.loads(json.dumps(event))
+        for field in ('flow_id','tx_id','src_port','dest_port'):
+            decoded[field]=str(decoded[field])
+        decoded['alert']['signature_id']='9900101'
+        decoded['http']['status']='302'
+        wrapper={'agent':{'id':'001','name':'ubuntu-endpoint'},'data':decoded}
+        (self.root/'wazuh.jsonl').write_text(json.dumps(wrapper)+'\n')
+        engine.consume()
+        self.assertEqual(len(engine.events),2)  # native EVE + Apache evidence
+        self.assertEqual(engine.counts['duplicate_views'],1)
+        self.assertEqual(engine.cases[0]['http_status_counts'],{'302':2})
+        self.assertEqual(engine.cases[0]['status'],'possible_web_sqli')
+        self.assertFalse(engine.cases[0]['confirmed_compromise'])
+        with (self.root/'wazuh.jsonl').open('a') as stream:
+            for view in (decoded,event):
+                stream.write(json.dumps({'agent':wrapper['agent'],
+                    'full_log':json.dumps(view)})+'\n')
+        engine.consume()
+        self.assertEqual(len(engine.events),2)
+        self.assertEqual(engine.counts['duplicate_views'],3)
+        self.assertEqual(engine.cases[0]['http_status_counts'],{'302':2})
+
+    def test_http_status_accepts_only_valid_integers_or_ascii_three_digit_strings(self):
+        self.assertIsNone(normalize_http_status(None))
+        for value in (100,'100',302,'302',599,'599'):
+            self.assertEqual(normalize_http_status(value),int(value))
+            self.assertIs(type(normalize_http_status(value)),int)
+        for value in (True,False,302.0,'302.0',99,600,'099','600',' 302',
+                      '0302','\uff13\uff10\uff12','',[],{},'unknown'):
+            with self.subTest(value=value),self.assertRaises(ValueError):
+                normalize_http_status(value)
+
+    def test_invalid_sensor_http_status_is_recorded_without_stopping_valid_evidence(self):
+        engine=Correlator(self.root,self.root/'out',self.config)
+        event={'timestamp':apache_tsv(tsv())['event_time'],'event_type':'alert',
+            'flow_id':1,'src_ip':'172.20.0.4','dest_ip':'172.20.0.3',
+            'src_port':41000,'dest_port':80,'alert':{'signature_id':9900101},
+            'http':{'url':PAYLOAD,'http_method':'GET'}}
+        values=(True,302.0,'unknown','600',None)
+        rows=[{**event,'http':{**event['http'],'status':value}} for value in values]
+        (self.root/'eve.jsonl').write_text(''.join(json.dumps(e)+'\n' for e in rows))
+        engine.consume()
+        self.assertEqual(engine.counts['invalid_source_records'],4)
+        self.assertEqual(len(engine.errors.read_text().splitlines()),4)
+        self.assertEqual(len(engine.events),1)
+        self.assertIsNone(next(iter(engine.events.values()))['http_status'])
+        self.assertEqual(engine.cases[0]['http_status_counts'],{})
+
+    def test_legacy_normalized_views_merge_status_counts_without_mutating_evidence(self):
+        event=normalize_line('apache.tsv',tsv(status=302),self.config)
+        views=[{**event,'event_id':str(i),'http_status':status,'source_refs':[]}
+               for i,status in enumerate((302,'302',None))]
+        case=build_cases(views,self.config)[0]
+        self.assertEqual(case['http_status_counts'],{'302':2})
+        self.assertEqual(case['stages'][0]['evidence_count'],3)
+        self.assertEqual(views[1]['http_status'],'302')
 
     def test_case_id_stable_for_late_views_in_same_window(self):
         a=normalize_line('apache.tsv',tsv(),self.config); a.update(event_id='a',source_refs=[])

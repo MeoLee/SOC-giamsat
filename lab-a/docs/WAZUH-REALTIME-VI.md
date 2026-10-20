@@ -197,6 +197,10 @@ không phải khai thác thành công. Muốn kiểm chứng ứng dụng trả 
 đăng nhập DVWA hợp lệ và review response riêng theo [SCENARIOS](SCENARIOS-VI.md).
 Không chia sẻ session cookie hoặc khẳng định MLP có lớp SQLi.
 
+Nếu cảnh báo đã xuất hiện nhưng Live dừng với lỗi so sánh `int` và `str`, áp
+dụng [bản sửa HTTP status khi ghép EVE/Wazuh](LIVE-SQLI-FIX-VI.md) và chạy phiên
+mới. Giữ bằng chứng của phiên cũ; không tính phiên bị ngắt là hoàn tất.
+
 ## 6. Quan sát và chấm kết quả trên dashboard
 
 Filter tất cả sự kiện AI:
