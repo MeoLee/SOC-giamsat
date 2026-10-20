@@ -1,9 +1,14 @@
 # Tải gói
 
-- **[AI Lab A 0.4.3 — Wazuh realtime, risk và attack chain](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.3-Research-20261019.zip)**
+- **[AI Lab A 0.4.3 — Wazuh realtime, gồm sửa runner SSH ngày 20/10](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.3-Research-20261020.zip)**
+- [Bản vá runner SSH cho máy đã có 0.4.3](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.3-Chain-SSH-Fix-20261020.zip)
+- [Chẩn đoán và hướng dẫn sửa chain SSH/Nmap](../lab-a/docs/CHAIN-SSH-FIX-VI.md)
+- [SHA256 gói cập nhật 20/10](SOC-AI-Lab-A-v0.4.3-Research-20261020.zip.sha256)
+- [SHA256 bản vá runner SSH](SOC-AI-Lab-A-v0.4.3-Chain-SSH-Fix-20261020.zip.sha256)
 - [Bản vá Wazuh realtime cho máy đã có 0.4.2](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4-Wazuh-Realtime-20261019.zip)
 - [Hướng dẫn triển khai Wazuh realtime và kịch bản](../lab-a/docs/WAZUH-REALTIME-VI.md)
-- [SHA256 gói 0.4.3](SOC-AI-Lab-A-v0.4.3-Research-20261019.zip.sha256)
+- [Full source 0.4.3 trước sửa runner SSH](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.3-Research-20261019.zip)
+- [SHA256 gói 0.4.3 ngày 19/10](SOC-AI-Lab-A-v0.4.3-Research-20261019.zip.sha256)
 - [SHA256 bản vá Wazuh](SOC-AI-Lab-A-v0.4-Wazuh-Realtime-20261019.zip.sha256)
 - [Full source 0.4.2 trước cập nhật Wazuh](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.2-Research-20261019.zip)
 - [Bản vá dashboard Quality cho máy đã có 0.4.1](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4-Dashboard-Quality-20261019.zip)

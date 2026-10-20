@@ -90,6 +90,23 @@ def ssh_command(client,target,username,wrong=False):
     return argv
 
 
+def expected_password_rejection(result, target, username):
+    """Classify the client's rejection, not proof of a server auth-log event.
+
+    With NumberOfPasswordPrompts=1 OpenSSH can exit 255 before sshpass sees
+    another prompt and returns its own code 5. Other SSH errors also use 255,
+    so require the exact account/target and password in the denial methods.
+    """
+    if result.returncode == 5:
+        return True
+    if result.returncode != 255:
+        return False
+    stderr = result.stderr.decode(errors='replace')
+    match = re.search(r'(?m)^' + re.escape(username + '@' + target)
+                      + r': Permission denied \(([^)\r\n]+)\)\.\r?$', stderr)
+    return bool(match and 'password' in match.group(1).split(','))
+
+
 def validate_capture(path, client, sensor):
     capture=read_json(path/'session.json'); ai=read_json(path/'ai-session.json')
     if capture.get('closed') or ai.get('status')!='running':
@@ -134,7 +151,8 @@ def main():
         'model_weights_sha256':ai['model_weights_sha256'],'started_at':now(),
         'complete':False,'training_label':None,'steps':[]}
     path=a.output/'operator.json'
-    def command(argv, *, interactive=False, expected=(0,), timeout=40):
+    def command(argv, *, interactive=False, expected=(0,), timeout=40,
+                expect_password_rejection=False):
         start=now()
         r=subprocess.run(argv,timeout=timeout,capture_output=not interactive)
         step={'argv':argv,'started_at':start,'ended_at':now(),'returncode':r.returncode,
@@ -143,9 +161,17 @@ def main():
             step.update(stdout=r.stdout.decode(errors='replace')[:16000],
                         stderr=r.stderr.decode(errors='replace')[:4000])
             print(step['stdout'],end='',flush=True)
+        accepted = (expected_password_rejection(r,a.target,a.username)
+                    if expect_password_rejection else r.returncode in expected)
+        if expect_password_rejection:
+            step['client_outcome'] = 'password_rejected' if accepted else 'unexpected_result'
         report['steps'].append(step); write_json(path,report)
-        if r.returncode not in expected:
-            raise RuntimeError('Scenario command failed; inspect operator.json, do not assume expected evidence exists')
+        if not accepted:
+            detail = step.get('stderr','').strip() or step.get('stdout','').strip()
+            raise RuntimeError(f'Scenario command failed (exit {r.returncode}): '
+                               + (detail[:2000] or 'inspect operator.json'))
+        if expect_password_rejection:
+            print(f'EXPECTED_PASSWORD_REJECTION: exit={r.returncode}',flush=True)
         return r
     try:
         # One operation per capture. A chain is one operation with multiple steps.
@@ -185,7 +211,8 @@ def main():
             started=time.monotonic()
             for _ in range(count):
                 if time.monotonic()-started>50: raise RuntimeError('Password-failure window exceeded; collect actual auth outcomes')
-                command(ssh_command(a.client,a.target,a.username,True),expected=(5,),timeout=12)
+                command(ssh_command(a.client,a.target,a.username,True),
+                        expect_password_rejection=True,timeout=12)
             report['failure_attempts']=count
             report['failure_attempts_seconds']=round(time.monotonic()-started,3)
         if a.scenario in ('normal-ssh','ssh-success','ssh-negative','chain'):

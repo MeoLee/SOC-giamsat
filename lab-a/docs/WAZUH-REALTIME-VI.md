@@ -172,6 +172,11 @@ nhập password trực tiếp, không ghi password vào operator log. Runner d�
 thấy PAM faillock/tally2 trực tiếp trong cấu hình đã đọc; không tự tắt lockout.
 Lệnh SSH tự kết thúc sau remote command để tránh quên đóng phiên cuối.
 
+Nếu chain dừng sau Nmap hoặc sau auth failure đầu tiên, xem
+[bản sửa runner và chẩn đoán Nmap/SSH](CHAIN-SSH-FIX-VI.md). OpenSSH có thể trả
+255 khi mật khẩu bị từ chối với `NumberOfPasswordPrompts=1`; bản sửa kiểm tra
+đúng thông báo từ chối thay vì mặc định mọi mã 255 đều là kết quả mong đợi.
+
 Chạy `chain` trong một Live SESSION mới:
 
 ```powershell
