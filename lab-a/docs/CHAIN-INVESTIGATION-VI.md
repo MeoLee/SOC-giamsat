@@ -1,5 +1,8 @@
 # Lab A 0.4.6: chi tiết chain và kịch bản năm bước trên Wazuh
 
+Nếu Doctor từ chối log probe mới tạo còn rỗng, áp dụng
+[Doctor empty-log hotfix](DOCTOR-EMPTY-LOG-FIX-VI.md) rồi mở Live lại.
+
 Nếu đã import bản đầu và gặp `No mapping found for [data.event_time]`, xem
 [bản sửa tương thích index cũ](CHAIN-SHARD-FIX-VI.md). Bản ZIP có đuôi
 `Shard-Fix` và NDJSON hiện hành đã chứa sửa này; dashboard đã cài chỉ cần import

@@ -1,5 +1,8 @@
 # Lab A 0.4 — bản nghiên cứu cải tiến
 
+Nếu Live dừng ở nguồn endpoint mới với `Log source is not a regular file`,
+xem [bản sửa Doctor cho log rỗng](docs/DOCTOR-EMPTY-LOG-FIX-VI.md).
+
 Đã có [bản sửa lỗi shard khi đọc index cũ](docs/CHAIN-SHARD-FIX-VI.md) cho Chain
 Investigation; dùng ZIP 0.4.6 có đuôi Shard-Fix và file repair gồm hai visualization.
 

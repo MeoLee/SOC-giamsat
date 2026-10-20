@@ -2,6 +2,7 @@
 import argparse
 import json
 from pathlib import Path
+import stat
 import subprocess
 import sys
 
@@ -51,9 +52,11 @@ def diagnose(config_path, model=None, runtime=False, bridge=False, runner=None):
     if config is not None and runtime:
         for source in config['sources']:
             def source_stat(source=source):
-                value = docker(['exec', source['container'], 'stat', '-Lc', '%F|%d|%i|%s', '--', source['path']])
-                kind, device, inode, size = value.split('|')
-                if kind != 'regular file':
+                # GNU stat calls zero-byte files "regular empty file" in %F.
+                # Use the numeric inode mode, independent of size and locale.
+                value = docker(['exec', source['container'], 'stat', '-Lc', '%f|%d|%i|%s', '--', source['path']])
+                mode, device, inode, size = value.split('|')
+                if not stat.S_ISREG(int(mode, 16)):
                     raise ValueError('Log source is not a regular file')
                 return {'container': source['container'], 'path': source['path'],
                         'device': device, 'inode': inode, 'bytes': int(size),

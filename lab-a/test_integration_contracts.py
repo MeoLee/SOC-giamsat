@@ -142,6 +142,36 @@ class ContractTests(unittest.TestCase):
         self.assertTrue(all(c[0:2] == ['docker', 'exec'] for c in calls))
         self.assertEqual({c[3] for c in calls}, {'stat', 'pgrep', 'python3', 'cat'})
 
+    def test_doctor_accepts_empty_endpoint_log_and_nonempty_log_by_inode_mode(self):
+        config = self.config_file({'sources': [
+            {'kind': 'endpoint', 'container': 'ubuntu-endpoint',
+             'path': '/var/log/soc-lab/endpoint-probe.jsonl', 'output': 'endpoint-probe.jsonl'},
+            {'kind': 'auth', 'container': 'ubuntu-endpoint',
+             'path': '/var/log/auth.log', 'output': 'ubuntu-auth.log'}]})
+        calls = []
+        def runner(args, **kwargs):
+            calls.append(args)
+            # 0x81a0 is S_IFREG | 0640. Size zero does not change the type.
+            size = 0 if args[-1].endswith('endpoint-probe.jsonl') else 123
+            return SimpleNamespace(returncode=0, stdout=f'81a0|147|324032|{size}\n'.encode(), stderr=b'')
+        report = diagnose(config, runtime=True, runner=runner)
+        self.assertTrue(report['checks_passed'], report)
+        self.assertEqual([c['detail']['bytes'] for c in report['checks'][1:]], [0,123])
+        self.assertTrue(all(args[3:6] == ['stat','-Lc','%f|%d|%i|%s'] for args in calls))
+        self.assertFalse(report['lab_end_to_end_verified'])
+        self.assertFalse(report['checks'][1]['detail']['activity_or_capture_coverage_established'])
+
+    def test_doctor_still_rejects_directories_pipes_devices_and_invalid_stat(self):
+        config = self.config_file({'sources': [{'kind':'endpoint','container':'ubuntu-endpoint',
+            'path':'/var/log/soc-lab/endpoint-probe.jsonl','output':'endpoint-probe.jsonl'}]})
+        for mode in ('41ed', '11a4', 'c1ed', '21b6', '61a4', 'invalid'):
+            with self.subTest(mode=mode):
+                def runner(args, **kwargs):
+                    return SimpleNamespace(returncode=0,stdout=(mode+'|147|324032|0\n').encode(),stderr=b'')
+                report=diagnose(config,runtime=True,runner=runner)
+                self.assertFalse(report['checks_passed'])
+                self.assertFalse(report['checks'][1]['passed'])
+
 
 if __name__ == '__main__':
     unittest.main()

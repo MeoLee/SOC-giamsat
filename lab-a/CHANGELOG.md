@@ -1,3 +1,11 @@
+# 0.4.6 Doctor empty-log hotfix — 2026-10-20
+
+- Accept newly initialized zero-byte regular log files using GNU stat numeric
+  mode and stat.S_ISREG, instead of comparing a localized file description.
+- Preserve rejection of directories, FIFOs, sockets, devices and Docker errors;
+  zero bytes do not establish activity, capture coverage or end-to-end readiness.
+- No model, probe, log, runtime configuration or dashboard changes.
+
 # 0.4.6 chain shard compatibility hotfix — 2026-10-20
 
 - Fix all 18 Chain Investigation Top Hit sorts for daily indices that have no

@@ -1,5 +1,11 @@
 # Tải gói
 
+- **[AI Lab A 0.4.6 — gồm sửa Doctor log rỗng và shard](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.6-Research-Doctor-Fix-20261020.zip)**
+- [Bản vá Doctor cho máy đã cập nhật 0.4.6 Shard-Fix](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.6-Doctor-Fix-20261020.zip)
+- [Hướng dẫn sửa nguồn endpoint mới bị Doctor từ chối](../lab-a/docs/DOCTOR-EMPTY-LOG-FIX-VI.md)
+- [SHA256 full source gồm Doctor fix](SOC-AI-Lab-A-v0.4.6-Research-Doctor-Fix-20261020.zip.sha256)
+- [SHA256 bản vá Doctor](SOC-AI-Lab-A-v0.4.6-Doctor-Fix-20261020.zip.sha256)
+
 - **[AI Lab A 0.4.6 — gồm sửa lỗi shard khi đọc index cũ](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.6-Research-Shard-Fix-20261020.zip)**
 - [Bản vá tích lũy cho 0.4.5 hoặc 0.4.6, gồm sửa dashboard shard](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.6-Chain-Investigation-Shard-Fix-20261020.zip)
 - [Hướng dẫn sửa No mapping found và import đè](../lab-a/docs/CHAIN-SHARD-FIX-VI.md)
