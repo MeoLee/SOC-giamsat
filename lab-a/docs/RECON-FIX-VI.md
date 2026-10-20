@@ -68,9 +68,40 @@ mới có mặt trước khi chạy, không coi việc đó là bằng chứng c
 
 Không phải train lại hoặc chạy setup_wazuh.py: bridge hiện tại đã có rule 119203.
 
-## Nếu PCAP báo sai số lượng SYN
+## Sửa lỗi bộ cài cộng trùng hai EVE output
 
-Nếu 16 unit test đạt nhưng installer dừng ở
+Báo cáo `recon-diagnostic-20261020-110212.json` xác nhận lab ghi cùng alert vào
+`eve.json` và `eve-alerts.json`. Bộ cài cũ đọc glob `eve*.json`, nên nhóm scan
+được đếm 64 alert cho 32 kết nối, HTTP 66 cho 33, SSH 48 cho 24. Mỗi file riêng
+có đúng 92 alert SYN và hai alert SQLi. Lỗi nằm ở bước đọc kết quả PCAP của bộ
+cài; người dùng chưa cần mở Live ở bước này.
+
+[Bản vá bổ sung cho máy đã có 0.4.4](../../downloads/SOC-AI-Lab-A-v0.4.4-EVE-Installer-Fix-20261020.zip)
+đổi bộ cài sang kiểm tra riêng `eve.json`, đúng nguồn Live đang đọc. Giữ nguyên
+hai EVE output, YAML và rule SQLi. Vẫn kiểm tra chính xác 32/33/24 quan sát trong
+nguồn này; không gộp/xóa bản ghi trong nguồn để làm kiểm tra đạt. Thiếu `eve.json`,
+thiếu SYN hoặc thừa SYN trong chính file đó vẫn làm cài đặt dừng.
+
+Giải nén gói vá trực tiếp vào `E:\SOC-Lab\AI\SOC-AI-v0.4-research`, ghi đè source,
+rồi chạy `test_lab_recon test_recon_diagnostic` và `setup_recon.py` như sau:
+
+```powershell
+Set-Location 'E:\SOC-Lab\AI\SOC-AI-v0.4-research'
+$py = 'E:\SOC-Lab\AI\.venv-ai04-cpu\Scripts\python.exe'
+& $py -m unittest -v test_lab_recon test_recon_diagnostic
+if ($LASTEXITCODE -ne 0) { throw 'Kiểm tra source chưa đạt.' }
+& $py .\setup_recon.py --container ubuntu-endpoint
+if ($LASTEXITCODE -ne 0) { throw 'Cài rule chưa đạt; giữ toàn bộ output.' }
+```
+
+Gói vá này dành cho source 0.4.4 đã giải nén; không cần cài lại các gói cũ, train
+lại hoặc restart Wazuh. Cần thấy `RECON_PCAP_VALIDATION_SOURCE: eve.json`,
+`RECON_PCAP_VALIDATED` và `SURICATA_RECON_RULES_VALIDATED_AND_RELOAD_REQUESTED`.
+Sau đó mới mở Live và kiểm thử HTTP burst/quét cổng bên dưới.
+
+## Chẩn đoán lỗi PCAP khác
+
+Nếu unit test đạt nhưng installer dừng ở
 `PCAP SYN count differs from known generated attempts`, rule đang chạy chưa
 được thay: lỗi xảy ra trước backup, atomic replace và SIGUSR2. Không bỏ điều
 kiện kiểm tra này hoặc coi đây là cài thành công. Thông báo cũ chưa chỉ rõ nhóm
@@ -93,6 +124,8 @@ cùng ghi alert có thể làm số bản ghi gấp đôi trong khi số kết n
 đây chỉ là một khả năng để phân biệt bằng dữ liệu, không phải kết luận cho lab.
 `live_rules_unchanged=true` và `reload_requested=false` xác nhận helper không
 cài rule. Exit code 0 chỉ cho biết đã thu chẩn đoán; phải đọc các số trong JSON.
+Helper vẫn cộng các output để chỉ ra bản ghi trùng; `all_counts_and_ports_match`
+của helper không phải kết luận cài đặt. Bộ cài đã sửa kiểm tra riêng `eve.json`.
 Không cần gửi model, mật khẩu hoặc toàn bộ EVE thật để chẩn đoán PCAP mẫu này.
 
 ## Kiểm thử lại hai ca độc lập
@@ -148,3 +181,10 @@ image jasonish/suricata@sha256:3f7b2f06e4667e4149deb34c52f278213a4a9b74bf926939a
 Suricata -T, PCAP dương/đối chứng, bảo toàn SQLi và yêu cầu hot reload đã đạt.
 Đã quan sát log daemon hoàn tất reload trong kiểm tra này. Đây không phải kết
 quả cài trên Windows lab người dùng hoặc bằng chứng Wazuh Dashboard của bản mới.
+
+Bản sửa bộ cài EVE đã tái hiện lỗi cũ bằng cấu hình ghi alert vào hai file
+`eve.json` và `eve-alerts.json` trên Suricata 8.0.3. Bộ cài mới đạt hai lần liên
+tiếp với cấu hình mặc định và hai lần với hai EVE output; cả bốn lần đều hoàn
+tất hot reload, giữ rule SQLi và đạt PCAP dương/đối chứng. 21 bài kiểm tra recon
+và chẩn đoán đạt, gồm hồi quy không dùng mirror để che thiếu/thừa bản ghi trong
+nguồn chính. Việc cài và hai ca Live trên Windows vẫn cần được người dùng chạy.

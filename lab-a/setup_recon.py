@@ -79,6 +79,35 @@ def test_pcap():
     return bytes(data)
 
 
+def read_validation_alerts(root):
+    """Validate the same primary EVE stream consumed by the installed Live.
+
+    A second eve-alerts.json output can contain another view of every alert.
+    Combining outputs doubles counts; deduplicating within the primary stream
+    could instead hide genuine extra packets. Read eve.json alone and retain
+    the exact-count assertions on that stream.
+    """
+    primary=Path(root)/'eve.json'
+    if not primary.is_file():
+        raise RuntimeError('PCAP primary eve.json output is missing; Live requires this EVE stream')
+    alerts=[]
+    for line in primary.read_text().splitlines():
+        event=json.loads(line)
+        if event.get('event_type')=='alert':alerts.append(event)
+    return alerts
+
+
+def validate_syn_coverage(observations):
+    for src,required,expected in [('198.51.100.20',set(range(1,33)),32),
+                                  ('198.51.100.30',{80},33),('198.51.100.40',{22},24)]:
+        subset=[e for e in observations if e['source_ip']==src]
+        if {e['destination_port'] for e in subset}!=required:
+            raise RuntimeError('PCAP SYN observation coverage failed for '+src+' in eve.json')
+        if len(subset)!=expected:
+            raise RuntimeError('PCAP SYN count differs from known generated attempts for '+src+
+                               ' in eve.json: expected '+str(expected)+', observed '+str(len(subset)))
+
+
 def remote_install(payload):
     if os.geteuid()!=0:raise RuntimeError('Run as root in the sensor container')
     processes=[]
@@ -99,24 +128,15 @@ def remote_install(payload):
         pcap=root/'recon-controls.pcap';pcap.write_bytes(base64.b64decode(payload['pcap'],validate=True))
         subprocess.run([args[0],'--runmode','single','--init-errors-fatal','-c',yaml,'-S',str(candidate),
             '-r',str(pcap),'-k','none','-l',str(root),'--set','unix-command.enabled=no'],check=True,timeout=90)
-        alerts=[]
-        for path in root.glob('eve*.json'):
-            for line in path.read_text().splitlines():
-                event=json.loads(line)
-                if event.get('event_type')=='alert':alerts.append(event)
+        alerts=read_validation_alerts(root)
+        print('RECON_PCAP_VALIDATION_SOURCE: eve.json',flush=True)
         observations=[]
         for event in alerts:
             if str(event['alert']['signature_id'])!='9900003':continue
             row=algorithm['observation'](event,'pcap-sensor','pcap-target')
             row['event_id']='pcap:'+hashlib.sha256(json.dumps(row,sort_keys=True).encode()).hexdigest()
             observations.append(row)
-        for src,required in [('198.51.100.20',set(range(1,33))),
-                              ('198.51.100.30',{80}),('198.51.100.40',{22})]:
-            subset=[e for e in observations if e['source_ip']==src]
-            if {e['destination_port'] for e in subset}!=required:
-                raise RuntimeError('PCAP SYN observation coverage failed for '+src)
-            expected={'198.51.100.20':32,'198.51.100.30':33,'198.51.100.40':24}[src]
-            if len(subset)!=expected:raise RuntimeError('PCAP SYN count differs from known generated attempts')
+        validate_syn_coverage(observations)
         scans=algorithm['scan_evidence'](observations,{})
         if not scans or {e['source_ip'] for e in scans}!={'198.51.100.20'}:
             raise RuntimeError('PCAP distinct-port positive/control checks failed')

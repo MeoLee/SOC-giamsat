@@ -14,7 +14,8 @@ from lab_correlation import Correlator, DEFAULTS, build_cases, normalize_line
 from lab_recon import scan_evidence, instant
 from live_activity import Activities
 from test_lab_correlation import syn, recon, normalized, scan, sequence
-from setup_recon import LEGACY, merge_rules, remote_install, remote_script, test_pcap as recon_pcap
+from setup_recon import (LEGACY, merge_rules, remote_install, remote_script,
+                         test_pcap as recon_pcap, read_validation_alerts, validate_syn_coverage)
 from wazuh_bridge import Publisher
 from wazuh_trace import recon_coverage
 from test_lab_correlation import time_at
@@ -155,6 +156,31 @@ class ReconTests(unittest.TestCase):
 class ReconInstallerTests(unittest.TestCase):
     def setUp(self):
         self.rule=Path(__file__).with_name('soc-recon.rules').read_text()
+
+    def test_primary_eve_is_validated_without_combining_mirrored_outputs(self):
+        rows=[{'event_type':'alert','source_ip':src,'destination_port':port}
+              for src,ports in [('198.51.100.20',range(1,33)),
+                                ('198.51.100.30',[80]*33),('198.51.100.40',[22]*24)]
+              for port in ports]
+        def write(path,events):
+            path.write_text(''.join(json.dumps(e)+'\n' for e in events))
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);primary=root/'eve.json';mirror=root/'eve-alerts.json'
+            write(primary,rows);write(mirror,rows)
+            selected=read_validation_alerts(root)
+            self.assertEqual(len(selected),89)
+            validate_syn_coverage(selected)
+            # A complete mirror must not conceal missing primary observations.
+            write(primary,rows[:-1])
+            with self.assertRaisesRegex(RuntimeError,'expected 24, observed 23'):
+                validate_syn_coverage(read_validation_alerts(root))
+            # Extra records inside the primary source still fail exact counts.
+            write(primary,rows+[rows[-1]])
+            with self.assertRaisesRegex(RuntimeError,'expected 24, observed 25'):
+                validate_syn_coverage(read_validation_alerts(root))
+            primary.unlink()
+            with self.assertRaisesRegex(RuntimeError,'primary eve.json output is missing'):
+                read_validation_alerts(root)
 
     def test_merge_preserves_sql_and_custom_rules_and_is_idempotent(self):
         other='alert udp any any -> any any (msg:"custom"; sid:9912345;)\n'

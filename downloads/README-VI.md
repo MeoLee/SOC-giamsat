@@ -1,6 +1,10 @@
 # Tải gói
 
-- **[AI Lab A 0.4.4 — sửa báo nhầm reconnaissance khi HTTP burst](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Research-20261020.zip)**
+- **[AI Lab A 0.4.4 — gồm sửa bộ cài khi có hai EVE output](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Research-EVE-Fix-20261020.zip)**
+- [Bản vá bổ sung cho máy đã có 0.4.4, sửa PCAP SYN count](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-EVE-Installer-Fix-20261020.zip)
+- [SHA256 full source gồm sửa bộ cài EVE](SOC-AI-Lab-A-v0.4.4-Research-EVE-Fix-20261020.zip.sha256)
+- [SHA256 bản vá bộ cài EVE](SOC-AI-Lab-A-v0.4.4-EVE-Installer-Fix-20261020.zip.sha256)
+- [Full source 0.4.4 trước sửa bộ cài EVE](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Research-20261020.zip)
 - [Bản vá 0.4.3 lên 0.4.4, gồm sửa SSH/SQLi trước đó](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Recon-Fix-20261020.zip)
 - [Hướng dẫn cài rule và kiểm thử HTTP burst/quét cổng](../lab-a/docs/RECON-FIX-VI.md)
 - [SHA256 full source 0.4.4](SOC-AI-Lab-A-v0.4.4-Research-20261020.zip.sha256)

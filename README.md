@@ -1,7 +1,8 @@
 # SOC-giamsat
 
 - [AI Lab A 0.4 — bắt đầu, cài mới, train và kiểm thử](lab-a/README-START-VI.md)
-- [Tải ZIP bản 0.4.4 với Wazuh realtime và sửa báo nhầm reconnaissance](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Research-20261020.zip)
+- [Tải ZIP bản 0.4.4 gồm sửa bộ cài EVE và báo nhầm reconnaissance](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Research-EVE-Fix-20261020.zip)
+- [Bản vá bộ cài cho máy đã có 0.4.4](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-EVE-Installer-Fix-20261020.zip)
 - [Cập nhật 0.4.4 và kiểm thử HTTP burst/quét cổng](lab-a/docs/RECON-FIX-VI.md)
 - [Sửa Live dừng khi ghép HTTP status từ EVE/Wazuh](lab-a/docs/LIVE-SQLI-FIX-VI.md)
 - [Bản vá và chẩn đoán runner chain SSH](lab-a/docs/CHAIN-SSH-FIX-VI.md)
