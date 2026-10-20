@@ -105,13 +105,13 @@ def auth_outcomes(capture, operator):
 
 def recon_coverage(capture,operator):
     """Normalized, deduplicated SYN evidence in the operator's actual scope."""
-    from lab_recon import instant, scan_evidence
+    from lab_recon import instant, scan_evidence, canonical_flow_id
     path=capture/'correlation-events.jsonl'
     scenario=operator['scenario']
     minimum={'normal-http':12,'single-port':24,'port-scan':32,'chain':32,
              'normal-ssh':5,'ssh-negative':2,'ssh-burst':8,'ssh-success':1,'web-sqli':1}.get(scenario)
     if scenario=='http-burst':minimum=operator.get('http_requests')
-    events={};invalid=0
+    events={};event_ids=set();invalid=0
     if path.exists():
         start,end=instant(operator['started_at']),instant(operator['ended_at'])
         with path.open(encoding='utf-8') as stream:
@@ -123,7 +123,14 @@ def recon_coverage(capture,operator):
                     if (row['source_ip']!=operator['scope']['source_ip'] or
                             row['target_ip']!=operator['scope']['target_ip'] or
                             not start<=instant(row['event_time'])<=end):continue
-                    events[row['event_id']]=row
+                    # Old captures may contain two IDs for the same SYN:
+                    # native 1034010540483425 and decoded "1034010540483425.000000".
+                    # Canonicalize in memory; retain original evidence IDs/files.
+                    row={**row,'flow_id':canonical_flow_id(row['flow_id'])}
+                    identity=tuple(row[key] for key in ('sensor_id','flow_id','event_time',
+                        'source_ip','source_port','target_ip','destination_port','target_host'))
+                    event_ids.add(row['event_id'])
+                    events.setdefault(identity,row)
                 except (ValueError,KeyError,TypeError):invalid+=1
     connections={(e['sensor_id'],e['flow_id'],e['source_ip'],e['source_port'],
                   e['target_ip'],e['destination_port']) for e in events.values()}
@@ -132,6 +139,8 @@ def recon_coverage(capture,operator):
     sufficient=bool(operator.get('complete') and type(minimum) is int and minimum>0
                     and len(connections)>=minimum and not invalid)
     return {'normalized_syn_observations':len(events),'observed_connections':len(connections),
+            'normalized_syn_event_ids_read':len(event_ids),
+            'duplicate_syn_views_merged':len(event_ids)-len(events),
             'expected_minimum_connections':minimum,'coverage_sufficient':sufficient,
             'distinct_destination_ports':len({e['destination_port'] for e in events.values()}),
             'qualifying_port_sweep_windows':len(scan_evidence(list(events.values()),config)),

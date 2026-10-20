@@ -1,5 +1,9 @@
 # AI Lab A 0.4.4: phân biệt SYN burst và quét nhiều cổng
 
+**Cập nhật sau kiểm thử Live:** [phân tích HTTP burst, sửa flow ID bị Wazuh thêm
+`.000000` và ghi nhận một MLP false positive](HTTP-BURST-REVIEW-20261020-VI.md).
+Ca HTTP đã không còn 119203. Sửa ID không thay weights hoặc threshold MLP.
+
 ## Vấn đề được xác nhận
 
 Lượt HTTP burst kiểm soát tạo 33 GET bình thường tới cổng 80, đều HTTP 200 và

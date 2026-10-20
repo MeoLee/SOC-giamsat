@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from lab_correlation import Correlator, DEFAULTS, build_cases, normalize_line
-from lab_recon import scan_evidence, instant
+from lab_recon import scan_evidence, instant, canonical_flow_id
 from live_activity import Activities
 from test_lab_correlation import syn, recon, normalized, scan, sequence
 from setup_recon import (LEGACY, merge_rules, remote_install, remote_script,
@@ -89,6 +89,63 @@ class ReconTests(unittest.TestCase):
         self.assertTrue(all(len(e['source_refs'])==2 for e in engine.events.values()))
         case=build_cases(list(engine.events.values()),engine.config)[0]
         self.assertEqual(len(case['stages'][0]['evidence_ids']),20)
+
+    def test_decimal_zero_wazuh_ids_merge_with_native_ids_without_float_conversion(self):
+        for source in ('suricata-eve.jsonl','wazuh-alerts.jsonl','ubuntu-auth.log'):
+            (self.root/source).touch()
+        engine=Correlator(self.root,self.root/'out')
+        # Deliberately above 2**53: float conversion would alter some IDs.
+        for port in range(1,21):
+            raw=syn(port=port,fid=9007199254740993+port)
+            engine.process('suricata-eve.jsonl',json.dumps(raw).encode())
+            raw['flow_id']=str(raw['flow_id'])+'.000000'
+            wrapper={'agent':{'id':'001','name':'ubuntu-endpoint'},'data':raw}
+            engine.process('wazuh-alerts.jsonl',json.dumps(wrapper).encode())
+        self.assertEqual(len(engine.events),20)
+        self.assertEqual(engine.counts['duplicate_views'],20)
+        self.assertTrue(all(len(e['source_refs'])==2 for e in engine.events.values()))
+        self.assertEqual(len(build_cases(list(engine.events.values()),engine.config)),1)
+
+    def test_syn_integer_ids_are_exact_and_ambiguous_forms_are_rejected(self):
+        for value in (1034010540483425,'1034010540483425','1034010540483425.000000',
+                      '001034010540483425.00'):
+            self.assertEqual(canonical_flow_id(value),'1034010540483425')
+        self.assertEqual(canonical_flow_id('9007199254740993.000000'),'9007199254740993')
+        self.assertEqual(canonical_flow_id('000.0'),'0')
+        for value in (True,False,1.0,-1,None,'','1.5','-1.000000','1e3','NaN',' 1','+1'):
+            with self.subTest(value=value),self.assertRaises(ValueError):canonical_flow_id(value)
+
+    def test_historical_coverage_merges_decimal_id_views_without_rewriting_evidence(self):
+        native=self.probes([80]*33)
+        mirrors=[{**e,'event_id':'old-wazuh:'+e['event_id'],
+                  'flow_id':e['flow_id']+'.000000'} for e in native]
+        path=self.root/'correlation-events.jsonl'
+        path.write_text(''.join(json.dumps(e)+'\n' for e in native+mirrors))
+        before=path.read_bytes()
+        operator={'scenario':'http-burst','http_requests':33,'complete':True,
+            'started_at':time_at(-1),'ended_at':time_at(20),
+            'scope':{'source_ip':'172.20.0.4','target_ip':'172.20.0.3'}}
+        result=recon_coverage(self.root,operator)
+        self.assertEqual(result['normalized_syn_event_ids_read'],66)
+        self.assertEqual(result['duplicate_syn_views_merged'],33)
+        self.assertEqual(result['observed_connections'],33)
+        self.assertEqual(result['normalized_syn_observations'],33)
+        self.assertTrue(result['coverage_sufficient'])
+        self.assertEqual(result['qualifying_port_sweep_windows'],0)
+        self.assertEqual(path.read_bytes(),before)
+        # Mirrored views must not make coverage pass when one connection is absent.
+        path.write_text(''.join(json.dumps(e)+'\n' for e in native[:-1]+mirrors[:-1]))
+        self.assertFalse(recon_coverage(self.root,operator)['coverage_sufficient'])
+
+    def test_historical_coverage_does_not_round_fractional_ids_to_hide_bad_records(self):
+        event={**self.probes([80])[0],'flow_id':'1034010540483425.5'}
+        (self.root/'correlation-events.jsonl').write_text(json.dumps(event)+'\n')
+        operator={'scenario':'http-burst','http_requests':1,'complete':True,
+            'started_at':time_at(-1),'ended_at':time_at(20),
+            'scope':{'source_ip':'172.20.0.4','target_ip':'172.20.0.3'}}
+        result=recon_coverage(self.root,operator)
+        self.assertEqual(result['invalid_normalized_records'],1)
+        self.assertFalse(result['coverage_sufficient'])
 
     def test_syn_observations_do_not_publish_attack_signatures_but_sweep_publishes_case(self):
         publisher=Publisher(self.root/'outbox.sqlite','manager',lambda *_:None)

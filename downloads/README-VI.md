@@ -1,6 +1,11 @@
 # Tải gói
 
-- **[AI Lab A 0.4.4 — gồm sửa bộ cài khi có hai EVE output](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Research-EVE-Fix-20261020.zip)**
+- **[AI Lab A 0.4.4 — gồm sửa flow ID trùng và bộ cài EVE](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Research-Flow-ID-Fix-20261020.zip)**
+- [Bản vá flow ID cho máy đã có 0.4.4, gồm sửa bộ cài EVE](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Flow-ID-Fix-20261020.zip)
+- [Phân tích ca HTTP burst và hướng dẫn cập nhật](../lab-a/docs/HTTP-BURST-REVIEW-20261020-VI.md)
+- [SHA256 full source gồm sửa ID](SOC-AI-Lab-A-v0.4.4-Research-Flow-ID-Fix-20261020.zip.sha256)
+- [SHA256 bản vá ID](SOC-AI-Lab-A-v0.4.4-Flow-ID-Fix-20261020.zip.sha256)
+- [Full source trước sửa flow ID](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-Research-EVE-Fix-20261020.zip)
 - [Bản vá bổ sung cho máy đã có 0.4.4, sửa PCAP SYN count](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.4-EVE-Installer-Fix-20261020.zip)
 - [SHA256 full source gồm sửa bộ cài EVE](SOC-AI-Lab-A-v0.4.4-Research-EVE-Fix-20261020.zip.sha256)
 - [SHA256 bản vá bộ cài EVE](SOC-AI-Lab-A-v0.4.4-EVE-Installer-Fix-20261020.zip.sha256)

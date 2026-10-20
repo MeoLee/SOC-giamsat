@@ -1,5 +1,8 @@
 # Lab A 0.4 — bản nghiên cứu cải tiến
 
+**Cập nhật flow ID:** bản 0.4.4 mới nhất gộp đúng SYN native/Wazuh khi ID có
+đuôi `.000000`. Xem [kết quả HTTP burst thật và bản vá](docs/HTTP-BURST-REVIEW-20261020-VI.md).
+
 **Bản đóng gói hiện hành: 0.4.4, gồm sửa bộ cài khi có hai EVE output.** Có [sửa báo nhầm SYN/recon và hướng dẫn cài rule mới](docs/RECON-FIX-VI.md), [Wazuh realtime, chấm điểm và kịch bản attack chain](docs/WAZUH-REALTIME-VI.md), cùng [train Quality bằng dashboard](docs/TRAIN-DASHBOARD-VI.md). Bản 0.4.4 cần chạy setup_recon.py trước Live; model và venv hiện có được giữ lại. Nếu đã cài ZIP0.4 và gặp HTTP400/dashboard hoặc test offset10≠9, xem [bản vá Windows](docs/WINDOWS-FIX-VI.md).
 
 Giữ nền MLP24 của A, nâng độ tin cậy dữ liệu/huấn luyện/đánh giá và bổ sung context theo cửa sổ. Đây là source và quy trình có thể kiểm chứng, **không phải weights đã được chứng minh tốt hơn model đang chạy trên máy bạn**.

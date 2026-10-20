@@ -47,6 +47,21 @@ def number(value, name):
     return value
 
 
+def canonical_flow_id(value):
+    """An exact unsigned integer ID, including Wazuh's decimal-zero strings.
+
+    Do not use float(): large flow IDs can lose precision. Fractional strings,
+    exponent notation, floats and booleans are not trustworthy integer IDs.
+    """
+    if type(value) is int and value>=0:
+        return str(value)
+    if isinstance(value,str):
+        match=re.fullmatch(r'([0-9]+)(?:\.0+)?',value)
+        if match:
+            return match.group(1).lstrip('0') or '0'
+    raise ValueError('Invalid SYN flow ID; expected an exact unsigned integer')
+
+
 def observation(event, sensor_id, target_host):
     if (event.get('event_type')!='alert' or not isinstance(event.get('alert'),dict)
             or str(event['alert'].get('signature_id'))!=SYN_SID
@@ -55,17 +70,14 @@ def observation(event, sensor_id, target_host):
     if (not isinstance(sensor_id,str) or not sensor_id or len(sensor_id)>256
             or any(ord(c)<32 for c in sensor_id)):
         raise ValueError('SYN sensor identity required')
-    fid=event.get('flow_id')
-    if (isinstance(fid,bool) or not isinstance(fid,(int,str))
-            or isinstance(fid,int) and fid<0 or isinstance(fid,str) and not fid.strip()):
-        raise ValueError('Invalid SYN flow ID')
+    fid=canonical_flow_id(event.get('flow_id'))
     return {'kind':'network.tcp_syn',
         'event_time':instant(event['timestamp']).isoformat(timespec='microseconds').replace('+00:00','Z'),
         'source_ip':str(ipaddress.ip_address(event['src_ip'])),
         'target_ip':str(ipaddress.ip_address(event['dest_ip'])), 'target_host':target_host,
         'source_port':number(event.get('src_port'),'source port'),
         'destination_port':number(event.get('dest_port'),'destination port'),
-        'flow_id':str(fid),'signature_id':SYN_SID,'sensor_id':sensor_id}
+        'flow_id':fid,'signature_id':SYN_SID,'sensor_id':sensor_id}
 
 
 def scan_evidence(events, config):
