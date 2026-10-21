@@ -1,0 +1,13 @@
+{
+  "version": "0.4.13",
+  "scope": "HTTP 0.4.12 cumulative plus unique SYN flow pressure",
+  "native_wazuh": "4.14.7 legacy logtest: 119219 level8; false evidence flag falls back119200 level0; final XML analysisd syntax passed",
+  "syn_evidence": "existing SID9900003 observation, no new Suricata signature; raw EVE normalization fixtures",
+  "limits": [
+    "No user Windows/DVWA end-to-end claim",
+    "No native hping3 packet capture replay in this environment",
+    "No handshake failure, outage, causal or Critical claim",
+    "No MLP retraining or calibrated next-action prediction"
+  ],
+  "tests": "run_checks.py; see release verification"
+}

@@ -12,6 +12,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config',type=Path,default=Path(__file__).with_name('live-config.json'))
     parser.add_argument('--http-flood',action='store_true',help='Enable dedicated Apache HTTP-pressure/degradation alerts; requires 0.4.12 Wazuh bridge rules')
+    parser.add_argument('--syn-flood',action='store_true',help='Enable unique SYN connection pressure alerts (119219)')
     a=parser.parse_args();load_config(a.config)
     config=read_json(a.config)
     candidate={**config,'correlation':{**DEFAULTS,**config.get('correlation',{}),'attack_chain_enabled':True}}
@@ -19,6 +20,7 @@ def main():
         if not any(s['kind']=='web' for s in load_config(a.config)['sources']):
             parser.error('HTTP flood detection requires an Apache TSV web source in live-config.json')
         candidate['correlation']['http_load_alerts_enabled']=True
+    if a.syn_flood:candidate['correlation']['syn_load_alerts_enabled']=True
     # Validate before replacing; write_json itself uses an atomic replacement.
     import tempfile
     with tempfile.TemporaryDirectory() as folder:

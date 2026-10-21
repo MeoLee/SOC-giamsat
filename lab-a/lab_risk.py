@@ -7,6 +7,7 @@ POLICY = 'soc-operational-risk/0.1'
 
 # ATT&CK candidates from observed evidence, not inferred decrypted SSH content.
 STAGE_LABELS = {
+    'syn_connection_pressure': ('TCP SYN connection pressure (impact unproven)', None),
     'observed_eicar_transfer': ('Verified EICAR test-file transfer (SSH lab receiver)', 'T1105'),
     'observed_auth_failures': ('Authentication failures (context)', None),
     'http_request_pressure': ('High HTTP request volume', None),

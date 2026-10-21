@@ -8,18 +8,18 @@ from copy import deepcopy
 from datetime import timedelta
 
 DEFAULTS = {'attack_chain_enabled': False, 'chain_max_seconds': 900,
-            'http_load_alerts_enabled':False,
+            'http_load_alerts_enabled':False,'syn_load_alerts_enabled':False,
             'http_pressure_threshold': 60, 'http_pressure_window_seconds': 10,
             'http_slow_us': 1000000, 'http_baseline_minimum': 10,
             'http_baseline_maximum':20,'http_latency_multiplier':5,'http_pressure_gap_us':500000,
             'chain_idle_seconds':90,'chain_rescan_gap_seconds':30}
-CATEGORIES = {'observed_auth_failures':'authentication_observation','possible_recon': 'reconnaissance',
+CATEGORIES = {'syn_connection_pressure':'availability_pressure','observed_auth_failures':'authentication_observation','possible_recon': 'reconnaissance',
     'observed_eicar_transfer':'test_file_transfer',
     'repeated_auth_failures': 'credential_access', 'auth_success_after_failures': 'credential_access',
     'observed_shell_execution': 'execution', 'observed_file_transfer': 'transfer',
     'possible_web_sqli': 'web_exploitation_attempt',
     'http_request_pressure': 'availability_pressure', 'possible_http_dos': 'availability_degradation'}
-BASE = {'observed_auth_failures':15,'possible_recon': 40, 'repeated_auth_failures': 65, 'auth_success_after_failures': 85,
+BASE = {'syn_connection_pressure':50,'observed_auth_failures':15,'possible_recon': 40, 'repeated_auth_failures': 65, 'auth_success_after_failures': 85,
         'observed_eicar_transfer':40,
         'observed_shell_execution': 85, 'observed_file_transfer': 85,
         'possible_web_sqli': 60, 'http_request_pressure': 45, 'possible_http_dos': 75}
@@ -27,7 +27,7 @@ BASE = {'observed_auth_failures':15,'possible_recon': 40, 'repeated_auth_failure
 
 def validate(config):
     result = {**DEFAULTS, **config}
-    for name in ('attack_chain_enabled','http_load_alerts_enabled'):
+    for name in ('attack_chain_enabled','http_load_alerts_enabled','syn_load_alerts_enabled'):
         if type(result[name]) is not bool:
             raise ValueError(name+' must be boolean')
     for key, low, high in [('chain_max_seconds',60,3600),('http_pressure_threshold',10,10000),
@@ -103,7 +103,8 @@ def _build_episode_chains(events, branches, config):
                 'name':'observed_auth_failures','start_time':rows[0]['event_time'],'end_time':rows[-1]['event_time'],
                 'evidence_ids':[e['event_id'] for e in rows],'failure_count':len(rows),
                 'threshold':config['failure_threshold'],'window_seconds':config['failure_window_seconds']}]})
-    all_branches+=http_cases(events,c)
+    from syn_load_detection import syn_cases
+    all_branches+=http_cases(events,c)+syn_cases(events,c)
     for b in sorted(all_branches,key=lambda b:b['case_id']):
         parts=[deepcopy(s) for s in b['stages'] if s['name']!='possible_recon']
         start=min(instant(s['start_time']) for s in parts)
@@ -176,7 +177,7 @@ def _build_episode_chains(events, branches, config):
 def stage_detail(stage):
     s=stage
     line=f"{s['start_time']} -> {s['end_time']}; evidence={len(s['evidence_ids'])}"
-    for key in ('distinct_destination_ports','port_threshold','port_window_seconds','failure_count',
+    for key in ('syn_connection_count','handshake_completion_verified','detection_method','limitation','distinct_destination_ports','port_threshold','port_window_seconds','failure_count',
                 'threshold','window_seconds','command','request_count','server_5xx_count','slow_request_count',
                 'baseline_request_count','healthy_baseline_observed','service_degradation_observed',
                 'window_rate_rps','http_route','http_method','application','target_port','server_5xx_ratio','slow_request_ratio',
@@ -208,6 +209,8 @@ def wire_events(chain, session_id, evidence_file, runtime=None):
                 'evidence_count':len(s['evidence_ids']),'evidence_ids':s['evidence_ids'][:4],
                 'stage_details':stage_detail(s),'candidate_technique':STAGE_LABELS[s['name']][1] or 'unmapped',
                 'confirmed_compromise':False,'prediction_is_not_ground_truth':True}
+        if s['name']=='syn_connection_pressure':
+            fields.update({k:s[k] for k in ('syn_connection_count','threshold','window_seconds','target_port','sensor_id','handshake_completion_verified','service_degradation_observed','detection_method','limitation')})
         if s['name']=='observed_eicar_transfer':
             fields.update({k:s[k] for k in ('artifact_path','artifact_sha256','artifact_md5','artifact_bytes',
                 'test_artifact','executed','vt_status','fim_alert_id','vt_alert_id','vt_rule_id',

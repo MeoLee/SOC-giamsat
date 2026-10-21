@@ -76,6 +76,8 @@ def diagnose(config_path, model=None, runtime=False, bridge=False, runner=None):
                     raise ValueError('Unsupported bridge installation')
                 if config['correlation'].get('attack_chain_enabled') and not {119212,119213,119214} <= set(ready.get('rule_ids',[])):
                     raise ValueError('Install the 0.4.8 bridge rules before starting chain Live: python setup_wazuh.py --manager '+config['wazuh_manager'])
+                if config['correlation'].get('syn_load_alerts_enabled') and 119219 not in set(ready.get('rule_ids',[])):
+                    raise RuntimeError('Install Wazuh SYN pressure rule 119219 using setup_wazuh.py')
                 if config['correlation'].get('http_load_alerts_enabled') and not {119217,119218}<=set(ready.get('rule_ids',[])):
                     raise ValueError('Install the 0.4.12 HTTP flood bridge rules: python setup_wazuh.py --manager '+config['wazuh_manager'])
                 return {'installation_version': ready['version'],

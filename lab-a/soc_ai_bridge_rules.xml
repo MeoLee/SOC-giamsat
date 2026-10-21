@@ -117,4 +117,11 @@
     <description>SOC nghi vấn HTTP DoS: $(source_ip) đến $(target_ip)$(http_route), requests=$(request_count), 5xx=$(server_5xx_count), p95=$(burst_p95_us)us. Có baseline cùng route; chưa xác nhận nguyên nhân hoặc gián đoạn dịch vụ.</description>
     <group>soc_ai_http_degradation,web,</group>
   </rule>
+  <rule id="119219" level="8">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^syn_load$</field>
+    <field name="syn_rate_evidence_verified">^true$</field>
+    <description>SOC nghi vấn SYN flood: $(source_ip) đến $(target_ip):$(target_port), $(syn_connection_count) flow SYN duy nhất/$(window_seconds)s. Chưa xác nhận suy giảm dịch vụ hay kết nối half-open.</description>
+    <group>soc_ai_syn_pressure,availability,</group>
+  </rule>
 </group>

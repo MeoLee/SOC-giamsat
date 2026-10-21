@@ -198,6 +198,7 @@ class Activities:
             print('[AUTH]', safe(src), '->', safe(host), 'user='+safe(user), safe(kind), 'count='+str(count), flush=True)
         self.publish_chains(engine)
         self.publish_http_load(engine)
+        self.publish_syn_load(engine)
         for case in engine.cases:
             # Publish on stage/status transitions, not once per failed password.
             stages = [s['name'] for s in case['stages']]
@@ -246,6 +247,25 @@ class Activities:
                 if len(encoded(row).encode('utf-8')) > 6000:
                     raise RuntimeError('Correlation event exceeds 6000 bytes; local case/evidence preserved. Shorten metadata before Wazuh delivery.')
                 self.publisher.enqueue(row)
+
+    def publish_syn_load(self,engine):
+        from syn_load_detection import syn_cases
+        from lab_correlation import digest
+        config=getattr(engine,'config',{})
+        if not config.get('attack_chain_enabled'):return
+        if not hasattr(self,'syn_load_revisions'):self.syn_load_revisions={}
+        for case in syn_cases(list(engine.events.values()),config):
+            s=case['stages'][0];revision=digest(s)
+            if self.syn_load_revisions.get(case['case_id'])==revision:continue
+            row=make_event('syn_load',[self.folder.name,case['case_id'],revision],
+                **assessment(50,'Unique SYN flows to one destination port; service impact unknown','syn_pressure_observed'),
+                source_ip=case['source_ip'],target_ip=case['target_ip'],target_host=case['target_host'],
+                session_id=self.folder.name,event_time=s['end_time'],syn_rate_evidence_verified=True,
+                syn_connection_count=s['syn_connection_count'],target_port=s['target_port'],threshold=100,window_seconds=10,
+                handshake_completion_verified=False,service_degradation_observed=False,dos_causality_proven=False,
+                evidence_ids=s['evidence_ids'][:4],evidence_count=len(s['evidence_ids']),evidence_file=str(engine.snapshot),training_label=None)
+            self.emit(row);self.syn_load_revisions[case['case_id']]=revision
+            print('[SYN-LOAD]',safe(case['source_ip']),'->',safe(case['target_ip']), 'port='+str(s['target_port']), 'unique_syn_flows='+str(s['syn_connection_count']),flush=True)
 
     def publish_http_load(self,engine):
         config=getattr(engine,'config',{})

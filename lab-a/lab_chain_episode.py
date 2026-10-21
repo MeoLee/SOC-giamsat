@@ -11,7 +11,8 @@ def episodes(events,config):
     from lab_campaign import http_cases
     scans=scan_evidence(events,config)
     proof_ids={i for s in scans for i in s['recon_evidence_ids']}
-    http_ids={i for b in http_cases(events,config) for s in b['stages'] for i in s['evidence_ids']}
+    from syn_load_detection import syn_cases
+    http_ids={i for b in http_cases(events,config)+syn_cases(events,config) for s in b['stages'] for i in s['evidence_ids']}
     grouped=defaultdict(list);scan_groups=defaultdict(list)
     def key(e):return e['source_ip'],e['target_ip'],e['target_host']
     for e in events:
