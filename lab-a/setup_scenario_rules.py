@@ -2,7 +2,7 @@
 import argparse,json,re,subprocess,sys
 from pathlib import Path
 import xml.etree.ElementTree as ET
-from wazuh_install_checks import RuleCheck, embedded_support
+from wazuh_install_checks import RuleCheck, embedded_support, restart_manager, ensure_no_restart_in_progress, ManagerRestartInProgress
 RULE_PATH='/var/ossec/etc/rules/soc_scenario_rules.xml'
 MARKER='SOC-SCENARIO MANAGED'
 FIREWALL_SAMPLE='Oct 21 12:00:00 ubuntu-endpoint kernel: SOC_LAB_FW_DROP IN=eth0 OUT= MAC=00:00:00:00:00:00 SRC=172.20.0.4 DST=172.20.0.3 LEN=60 TOS=0x00 PREC=0x00 TTL=64 ID=1 DF PROTO=TCP SPT=45000 DPT=4444 WINDOW=1024 RES=0x00 SYN URGP=0'
@@ -20,6 +20,7 @@ def check_collisions(rules,existing):
 
 def install_remote(payload):
     import os,grp,tempfile,time
+    ensure_no_restart_in_progress()
     path=Path(RULE_PATH);old=path.read_bytes() if path.exists() else None
     existing={str(p):p.read_text(encoding='utf-8-sig') for p in Path('/var/ossec/etc').glob('**/*.xml')}
     check_collisions(payload['rules'],existing)
@@ -44,14 +45,17 @@ def install_remote(payload):
     try:
         write(payload['rules'].encode());run(['/var/ossec/bin/wazuh-analysisd','-t'])
         checker=RuleCheck(FIREWALL_SAMPLE+'\n',[119254]);checker.before_restart()
-        restarted=True;run(['/var/ossec/bin/wazuh-control','restart'])
+        restarted=True;restart_manager()
         checker.after_restart()
+    except ManagerRestartInProgress:
+        print('RESTART_PENDING: candidate retained; no overlapping rollback restart.',flush=True)
+        raise
     except BaseException:
         if old is None:path.unlink(missing_ok=True)
         else:write(old)
         print('Previous scenario rules restored.',flush=True)
         if restarted:
-            try:run(['/var/ossec/bin/wazuh-control','restart'])
+            try:restart_manager()
             except Exception as rollback_error:print('ROLLBACK_RESTART_FAILED: '+str(rollback_error),flush=True)
         raise
     print('SCENARIO_RULES_INSTALLED; fixture logtest is not a live firewall/FIM verification.')

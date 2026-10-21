@@ -11,7 +11,7 @@ import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
-from wazuh_install_checks import RuleCheck, embedded_support
+from wazuh_install_checks import RuleCheck, embedded_support, restart_manager, ensure_no_restart_in_progress, ManagerRestartInProgress
 
 LOCATION = '/var/ossec/logs/soc-ai/events.jsonl'
 RULE_PATH = '/var/ossec/etc/rules/soc_ai_bridge_rules.xml'
@@ -59,6 +59,7 @@ def install_remote(payload):
     import os
     import tempfile
     import time
+    ensure_no_restart_in_progress()
     config = Path('/var/ossec/etc/ossec.conf')
     rules = Path(RULE_PATH)
     old_config = config.read_bytes()
@@ -127,12 +128,15 @@ def install_remote(payload):
         checker = RuleCheck(lines, range(119201, 119216))
         checker.before_restart()
         restarted = True
-        run(['/var/ossec/bin/wazuh-control', 'restart'])
+        restart_manager()
         validation = checker.after_restart()
         write(ready, json.dumps({'version': 'soc-ai-wazuh/0.1', 'log_path': LOCATION,
             'installed_at_epoch': time.time(), 'rule_ids': list(range(119200, 119216)),
             'installer_version': '0.4.10', 'validation': validation}).encode())
         print('WAZUH_BRIDGE_INSTALLED', flush=True)
+    except ManagerRestartInProgress:
+        print('RESTART_PENDING: no success marker written; candidate retained to avoid overlapping restarts.',flush=True)
+        raise
     except BaseException:
         if changed:
             write(config, old_config)
@@ -143,7 +147,7 @@ def install_remote(payload):
             print('Previous configuration restored.', flush=True)
             if restarted:
                 try:
-                    run(['/var/ossec/bin/wazuh-control', 'restart'])
+                    restart_manager()
                 except Exception as rollback_error:
                     print('ROLLBACK_RESTART_FAILED: '+str(rollback_error), flush=True)
         raise

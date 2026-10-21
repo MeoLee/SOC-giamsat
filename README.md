@@ -1,5 +1,8 @@
 # SOC-giamsat
 
+- **[0.4.10.2 — Severity/VT đã sửa restart timeout](https://raw.githubusercontent.com/MeoLee/SOC-giamsat/main/downloads/SOC-AI-Lab-A-v0.4.10.2-Severity-VT-20261021.zip)** (nâng từ 0.4.9.2).
+- [Máy đã có 0.4.10/0.4.10.1: vá restart và cài lại VT](lab-a/docs/VT-RESTART-FIX-04102-VI.md).
+
 - **[0.4.10.1 — Severity/VT đã sửa parser logtest](https://raw.githubusercontent.com/MeoLee/SOC-giamsat/main/downloads/SOC-AI-Lab-A-v0.4.10.1-Severity-VT-20261021.zip)** (nâng từ 0.4.9.2).
 - [Máy đã có 0.4.10: chỉ vá lỗi matched thừa signature_id](lab-a/docs/WAZUH-LOGTEST-PARSER-FIX-04101-VI.md).
 

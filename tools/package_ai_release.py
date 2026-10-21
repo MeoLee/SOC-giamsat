@@ -11,7 +11,8 @@ import subprocess
 import zipfile
 
 
-REQUIRED = {'docs/WAZUH-LOGTEST-PARSER-FIX-04101-VI.md', 'docs/validation-04101.json', 'setup_virustotal.py', 'vt_lab_artifact.py', 'test_severity_virustotal.py',
+REQUIRED = {'test_restart_control.py', 'docs/VT-RESTART-FIX-04102-VI.md',
+            'docs/validation-04102.json', 'docs/WAZUH-LOGTEST-PARSER-FIX-04101-VI.md', 'docs/validation-04101.json', 'setup_virustotal.py', 'vt_lab_artifact.py', 'test_severity_virustotal.py',
             'docs/SEVERITY-POLICY-0410-VI.md', 'docs/VIRUSTOTAL-01-VI.md', 'docs/validation-0410.json', 'test_chain_retention.py', 'docs/CHAIN-RETENTION-0492-VI.md',
             'docs/validation-0492.json', 'wazuh_install_checks.py', 'test_wazuh_install_checks.py',
             'docs/WAZUH-INSTALLER-FIX-0491-VI.md', 'docs/validation-0491.json', 'soc_ai/web/dashboard.html', 'soc_ai/predict.py', 'soc_ai/train.py',

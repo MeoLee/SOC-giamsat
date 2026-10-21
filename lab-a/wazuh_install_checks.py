@@ -35,6 +35,69 @@ def wait_manager_ready(timeout=30):
         time.sleep(min(2, max(0, deadline - time.monotonic())))
 
 
+class ManagerRestartInProgress(RuntimeError):
+    """Do not restore configuration or start a second control process yet."""
+
+
+def ensure_no_restart_in_progress():
+    lock=Path(BIN).parent/'var/start-script-lock/pid'
+    if not lock.is_file():return
+    try:pid=int(lock.read_text().strip())
+    except (ValueError,OSError) as error:
+        raise RuntimeError('Cannot inspect Wazuh control lock; inspect '+str(lock)) from error
+    if pid<=0:raise RuntimeError('Invalid Wazuh control lock PID.')
+    try:os.kill(pid,0)
+    except ProcessLookupError:return
+    except PermissionError:pass
+    raise ManagerRestartInProgress('Wazuh control is still running (PID '+str(pid)+'). '
+                                   'No configuration change or second restart is allowed until it exits.')
+
+
+def restart_manager(timeout=240,redactions=()):
+    """Wait for the control PID, not EOF on pipes inherited by daemon children.
+
+    A private regular file captures output. A true timeout leaves the validated
+    candidate in place: restoring files while the first restart is still active
+    could make that process read a mixture of old/new configuration.
+    """
+    import tempfile
+    ensure_no_restart_in_progress()
+    folder=Path(BIN).parent/'logs';folder.mkdir(parents=True,exist_ok=True)
+    fd,name=tempfile.mkstemp(prefix='soc-setup-restart-',suffix='.log',dir=folder)
+    log=Path(name)
+    def show_output():
+        with log.open('rb') as reader:output=reader.read(256*1024).decode(errors='replace')
+        for value in redactions:
+            if value:output=output.replace(value,'[REDACTED]')
+        print(output,flush=True)
+    print('WAZUH_RESTART_BEGIN: timeout='+str(timeout)+'s; private output='+str(log),flush=True)
+    with os.fdopen(fd,'wb',buffering=0) as writer:
+        process=subprocess.Popen([BIN+'wazuh-control','restart'],stdin=subprocess.DEVNULL,
+                                 stdout=writer,stderr=subprocess.STDOUT)
+        started=time.monotonic();next_notice=started+10
+        try:
+            while process.poll() is None:
+                elapsed=time.monotonic()-started
+                if elapsed>=timeout:
+                    show_output()
+                    raise ManagerRestartInProgress('Restart control PID '+str(process.pid)+' is still running after '
+                        +str(timeout)+'s. Candidate configuration retained; no rollback or second restart was launched. '
+                        'Inspect control status and private log '+str(log))
+                if time.monotonic()>=next_notice:
+                    print('WAZUH_RESTART_WAITING: '+str(int(elapsed))+'s / '+str(timeout)+'s',flush=True)
+                    next_notice=time.monotonic()+10
+                time.sleep(min(1,max(0,timeout-elapsed)))
+        except BaseException as error:
+            if process.poll() is None and not isinstance(error,ManagerRestartInProgress):
+                raise ManagerRestartInProgress('Restart interrupted while control PID '+str(process.pid)
+                    +' is still running. Candidate retained; no second restart launched. Private log '+str(log)) from error
+            raise
+        show_output()
+        if process.returncode:
+            raise RuntimeError('wazuh-control restart exited with '+str(process.returncode)+'; private log '+str(log))
+    print('WAZUH_RESTART_COMPLETED',flush=True)
+
+
 def matched_rule_ids(output):
     """Read selected rules only from Phase 3, never decoded JSON field names.
 

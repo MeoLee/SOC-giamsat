@@ -11,7 +11,7 @@ import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
-from wazuh_install_checks import RuleCheck, embedded_support, wait_manager_ready
+from wazuh_install_checks import RuleCheck, embedded_support, wait_manager_ready, restart_manager, ensure_no_restart_in_progress, ManagerRestartInProgress
 
 MARKER='SOC-VT MANAGED v0.4.10'
 RULE_ID='119253'
@@ -43,6 +43,7 @@ def config_update(text,key):
 
 def install_remote(payload):
     import os,tempfile,time
+    ensure_no_restart_in_progress()
     key=payload['api_key']
     config=Path('/var/ossec/etc/ossec.conf');old=config.read_bytes()
     candidate=config_update(old.decode('utf-8-sig'),key).encode()
@@ -80,7 +81,7 @@ def install_remote(payload):
         sample=json.dumps({'integration':'virustotal','virustotal':{'found':1,'malicious':1,'positives':1,
             'source':{'file':'/var/lib/soc-lab/fim/fixture.txt'}}})+'\n'
         check=RuleCheck(sample,[87105]);check.before_restart()
-        restarted=True;run(['/var/ossec/bin/wazuh-control','restart'])
+        restarted=True;restart_manager(redactions=(key,))
         check.after_restart()
         deadline=time.monotonic()+30
         while True:
@@ -88,11 +89,14 @@ def install_remote(payload):
             if re.search(r'^wazuh-integratord\s+is running\b',output,re.M):break
             if time.monotonic()>=deadline:raise RuntimeError('wazuh-integratord did not become ready.')
             time.sleep(2)
+    except ManagerRestartInProgress:
+        print('RESTART_PENDING: candidate retained; no rollback restart was started. Do not launch another installer yet.',flush=True)
+        raise
     except BaseException:
         write(old)
         print('Previous configuration restored.',flush=True)
         if restarted:
-            try:run(['/var/ossec/bin/wazuh-control','restart'])
+            try:restart_manager(redactions=(key,))
             except Exception as error:print('ROLLBACK_RESTART_FAILED:',str(error).replace(key,'[REDACTED]'),flush=True)
         raise
     print('VIRUSTOTAL_CONFIGURED: new lab FIM files only (119253); hash lookup, no upload or Active Response.')

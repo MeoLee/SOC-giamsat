@@ -153,6 +153,11 @@ class InstallationChecks(unittest.TestCase):
                     return subprocess.CompletedProcess(argv, 1, b'', b'rollback restart failed')
                 return subprocess.CompletedProcess(argv, 0, b'', b'')
             namespace['RuleCheck'] = Candidate
+            namespace['ensure_no_restart_in_progress'] = lambda: None
+            def restart():
+                result=run([str(root/'bin/wazuh-control'),'restart'])
+                if result.returncode:raise RuntimeError('rollback restart failed')
+            namespace['restart_manager'] = restart
             output = io.StringIO()
             payload = {'rules': Path(module.__file__).with_name(
                 'soc_ai_bridge_rules.xml' if module is setup_wazuh else 'soc_scenario_rules.xml').read_text()}

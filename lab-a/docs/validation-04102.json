@@ -1,0 +1,34 @@
+{
+  "release": "0.4.10.2",
+  "date": "2026-10-21",
+  "unit_suite": {
+    "run": 451,
+    "failed": 0,
+    "skipped": 2,
+    "skipped_reason": "Windows filesystem integration requires Windows"
+  },
+  "restart_method": {
+    "regular_private_output_file": true,
+    "waits_for_control_pid_not_inherited_pipe_eof": true,
+    "timeout_seconds": 240,
+    "progress_seconds": 10,
+    "checks_native_lock_before_mutation": true,
+    "pending_control_killed": false,
+    "pending_control_starts_overlapping_rollback": false,
+    "candidate_retained_on_true_pending": true,
+    "success_claimed_while_pending": false,
+    "normal_failure_restores_old_config": true
+  },
+  "regression_tests": {
+    "new_tests": 8,
+    "real_daemon_stdout_inheritance_fixture": true,
+    "true_timeout_mock": true,
+    "interrupt_mock": true,
+    "live_and_stale_native_lock": true,
+    "vt_pending_keeps_candidate_and_secret_not_printed": true,
+    "vt_completed_failure_restores_original_and_preserves_error": true
+  },
+  "native_windows_manager_restart_verified": false,
+  "actual_virustotal_api_called": false,
+  "rule_model_dataset_changed": false
+}
