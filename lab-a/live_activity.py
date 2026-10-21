@@ -249,10 +249,8 @@ class Activities:
             print('[CORRELATION]', safe(case['source_ip']), '->', safe(case['target_host']),
                   safe(case['status']), safe(row['stages']), flush=True)
             if self.publisher:
-                from wazuh_bridge import encoded
-                if len(encoded(row).encode('utf-8')) > 6000:
-                    raise RuntimeError('Correlation event exceeds 6000 bytes; local case/evidence preserved. Shorten metadata before Wazuh delivery.')
-                self.publisher.enqueue(row)
+                from correlation_delivery import compact
+                self.publisher.enqueue(compact(row,self.path))
 
     def publish_ssh_contacts(self,engine):
         from ssh_contact_detection import contact_cases

@@ -1,0 +1,11 @@
+{
+  "version": "0.4.15.2",
+  "tests_run": 525,
+  "skipped_windows_only": 2,
+  "failures": 0,
+  "six_stage_correlation_long_path_publisher_regression": true,
+  "unicode_byte_limit_verified": 6000,
+  "full_local_event_preserved": true,
+  "native_wazuh_not_retested_no_rule_changes": true,
+  "windows_user_lab_verified": false
+}
