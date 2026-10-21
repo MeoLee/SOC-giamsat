@@ -12,6 +12,15 @@ READER_ID = 'soc-ai-chain-profile-reader-v1'
 # Display names, evidence requirements and follow-up hypotheses are curated.
 # ATT&CK does not prescribe a mandatory technique order or predict the future.
 STEPS = [
+    {'key':'ssh_service_contact','label':'Tiếp xúc dịch vụ SSH — chưa xác nhận Recon','technique':'unmapped',
+     'meaning':'SYN tới cổng 22 trước xác thực, không trùng source port của auth đã biết. Đây là ngữ cảnh; không xác định Nmap hay ý đồ xấu, không cộng điểm Recon.',
+     'requirement':'Đọc connection_count, thời gian, IP/port và bằng chứng. Một cổng không đạt điều kiện quét nhiều cổng.'},
+    {'key':'observed_ssh_session','label':'Phiên SSH xác thực thành công','technique':'unmapped',
+     'meaning':'Auth server ghi nhận Accepted và PID sshd. Đăng nhập thành công chưa chứng minh brute-force hay chiếm quyền.',
+     'requirement':'Đối chiếu account, IP, source_port, sshd_pid và thời gian. Chỉ có bước này trong hồ sơ socket shell đã được đối chiếu.'},
+    {'key':'observed_reverse_shell','label':'Reverse Shell — shell gắn socket đi ra','technique':'T1059.004',
+     'meaning':'Executable shell thực có stdin/stdout cùng socket TCP ESTABLISHED; SYN đi ra khớp IP/port, và ancestry khớp PID phiên SSH Accepted. Hành vi đã quan sát; chưa xác nhận đăng nhập trái phép, C2 hoặc leo thang.',
+     'requirement':'Đọc process_id (boot/PID/start), executable, UID, socket_inode, local/peer tuple, source_port, sshd_pids và outgoing_syn_verified. Polling có thể bỏ sót tiến trình ngắn; IPv4 trong lab.'},
     {'key':'syn_connection_pressure','label':'Nghi vấn SYN flood / áp lực kết nối TCP','technique':'unmapped',
      'meaning':'Ít nhất 100 flow SYN duy nhất trong 10 giây vào cùng cổng đích. Không phải HTTP GET; chưa xác nhận kết nối half-open, cạn tài nguyên, gián đoạn DVWA hay ý đồ tấn công.',
      'requirement':'Đối chiếu syn_connection_count, target_port, sensor_id và bằng chứng. Loại retransmission theo flow/source port. Cần handshake telemetry, backlog và health check để đánh giá tác động.'},
@@ -47,6 +56,10 @@ STEPS = [
      'requirement': 'Đọc request, rule, log ứng dụng và database; kiểm tra thay đổi dữ liệu hoặc lỗi truy vấn có liên quan.'},
 ]
 FOLLOW_UP = [
+    {'after':'observed_reverse_shell','label':'Giả thuyết: khám phá hệ thống, truy cập dữ liệu hoặc thử nâng quyền',
+     'detail':'Chưa quan sát các bước này. Điều tra audit/process tree, file changes, tài khoản và quyền. Reverse Shell không tự chứng minh leo thang, persistence hay C2.'},
+    {'after':'observed_ssh_session','label':'Giả thuyết: thao tác tiếp trong phiên SSH hoặc kết thúc phiên','detail':'Không khẳng định có thực thi lệnh nếu thiếu telemetry tiến trình.'},
+    {'after':'ssh_service_contact','label':'Giả thuyết: xác thực SSH hoặc dừng kết nối','detail':'Tiếp xúc một cổng chưa xác định ý đồ hoặc công cụ.'},
     {'after':'syn_connection_pressure','label':'Giả thuyết: tiếp tục áp lực kết nối hoặc chuyển sang HTTP','detail':'Chưa quan sát. Cần handshake, backlog và health check DVWA; chưa xác nhận DoS thành công.'},
     {'after':'observed_eicar_transfer','label':'Giả thuyết: thử thực thi file hoặc tiếp tục thao tác trên host',
      'detail':'Đây là hướng điều tra, chưa quan sát. Cần process/audit telemetry và liên kết đúng file/hash/phiên. Bài tập chỉ chuyển EICAR, không thực thi; kết quả VT không chứng minh infection, persistence, C2 hoặc leo thang.'},

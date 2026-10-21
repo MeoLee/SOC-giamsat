@@ -62,6 +62,10 @@ def diagnose(config_path, model=None, runtime=False, bridge=False, runner=None):
                         'device': device, 'inode': inode, 'bytes': int(size),
                         'activity_or_capture_coverage_established': False}
             check('source:' + source['output'], source_stat)
+            if source['kind']=='process':
+                check('process_observer:'+source['container'],lambda source=source:
+                    json.loads(docker(['exec','--user','0',source['container'],'python3','-c',
+                        "import sys,json; sys.path.insert(0,'/usr/local/lib/soc-lab'); import process_observer; print(json.dumps(process_observer.check_health()))"])))
         for sensor in sorted({s['container'] for s in config['sources'] if s['kind'] == 'eve'}):
             check('suricata_process:' + sensor, lambda sensor=sensor:
                   docker(['exec', sensor, 'pgrep', '-f', r'^([^[:space:]]*/)?suricata([[:space:]]|$)']))
@@ -76,6 +80,8 @@ def diagnose(config_path, model=None, runtime=False, bridge=False, runner=None):
                     raise ValueError('Unsupported bridge installation')
                 if config['correlation'].get('attack_chain_enabled') and not {119212,119213,119214} <= set(ready.get('rule_ids',[])):
                     raise ValueError('Install the 0.4.8 bridge rules before starting chain Live: python setup_wazuh.py --manager '+config['wazuh_manager'])
+                if any(s['kind']=='process' for s in config['sources']) and 119220 not in ready.get('rule_ids',[]):
+                    raise ValueError('Install process evidence rule 119220 with setup_wazuh.py before Live')
                 if config['correlation'].get('syn_load_alerts_enabled') and 119219 not in set(ready.get('rule_ids',[])):
                     raise RuntimeError('Install Wazuh SYN pressure rule 119219 using setup_wazuh.py')
                 if config['correlation'].get('http_load_alerts_enabled') and not {119217,119218}<=set(ready.get('rule_ids',[])):

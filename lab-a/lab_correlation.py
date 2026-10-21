@@ -15,9 +15,9 @@ import re
 import sys
 
 SOURCES = ('ubuntu-auth.log', 'suricata-eve.jsonl', 'wazuh-alerts.jsonl')
-AUTH = re.compile(r'^(\S+)\s+(\S+)\s+sshd(?:-session)?(?:\[\d+\])?:\s+'
+AUTH = re.compile(r'^(\S+)\s+(\S+)\s+sshd(?:-session)?(?:\[(\d+)\])?:\s+'
     r'(Failed|Accepted) (password|publickey) for (?:invalid user )?(\S+) '
-    r'from (\S+) port (\d+) ssh2(?:\s|$)')
+    r'from (\S+) port (\d+) ssh2(?::|\s|$)')
 DEFAULTS = {'protected_host': 'ubuntu-endpoint', 'protected_ip': '172.20.0.3',
     'agent_id': '001', 'failure_threshold': 8, 'failure_window_seconds': 60,
     'success_window_seconds': 300, 'recon_window_seconds': 600,
@@ -57,7 +57,7 @@ def auth_event(line, config):
         if any(text in line for text in ('Failed password for ', 'Accepted password for ', 'Accepted publickey for ')):
             raise ValueError('Unsupported SSH auth log format; RFC3339 timestamp with timezone and sshd program required')
         return None
-    date, host, outcome, method, user, ip, port = match.groups()
+    date, host, sshd_pid, outcome, method, user, ip, port = match.groups()
     number = int(port)
     if not 0 <= number <= 65535:
         raise ValueError('Invalid authentication source port')
@@ -65,7 +65,8 @@ def auth_event(line, config):
         'event_time': stamp(instant(date)), 'target_host': host,
         'target_ip': host_ip(host, config),
         'source_ip': str(ipaddress.ip_address(ip)), 'source_port': number,
-        'username': user, 'auth_method': method}
+        'username': user, 'auth_method': method,
+        **({'sshd_pid':int(sshd_pid)} if sshd_pid else {})}
 
 
 def host_ip(host, config):
@@ -128,6 +129,9 @@ def recon_event(event, config, sensor_id=None):
 def normalize_line(source, raw, config):
     kind = config.get('source_kinds', {}).get(source, source)
     if kind == 'raw': return None
+    if kind == 'process':
+        from lab_process_chain import normalize
+        return normalize(raw,config,source)
     if kind == 'endpoint':
         from lab_endpoint import normalize
         return normalize(raw, config, source)
@@ -219,12 +223,13 @@ def case_for(burst, scans, success=None, config=None):
 
 
 def build_cases(events, config):
+    events=list({e['event_id']:e for e in events}.values())
     from lab_recon import scan_evidence
     scans = scan_evidence(events,config)
     groups = defaultdict(list)
     for e in events:
         if e['kind'].startswith('auth.'):
-            groups[(e['target_host'], e['source_ip'], e['username'])].append(e)
+            groups[(e['target_host'], e['source_ip'], e['username'],e['target_ip'])].append(e)
     cases = {}
     for key, timeline in groups.items():
         recent = deque()
@@ -277,6 +282,8 @@ def build_cases(events, config):
     from lab_file_chain import transfer_cases
     for case in transfer_cases(events):
         cases[case['case_id']] = case
+    from lab_process_chain import extend_process_cases
+    extend_process_cases(cases,events,config)
     from lab_risk import case_assessment
     for case in cases.values():
         case.update(case_assessment(case))

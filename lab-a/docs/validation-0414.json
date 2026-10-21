@@ -1,0 +1,152 @@
+{
+  "version": "0.4.14",
+  "defensive_only": true,
+  "test_suite": {
+    "run": 500,
+    "failed": 0,
+    "errors": 0,
+    "windows_only_skips": 2
+  },
+  "native_process": {
+    "real_ssh_auth_syslog_pid": true,
+    "real_proc_fd_socket": true,
+    "real_suricata_outgoing_syn": true,
+    "same_session_case_join": true,
+    "fixture_fixed_marker_only": true,
+    "windows_lab_verified": false,
+    "chain_stage_names": [
+      [
+        "ssh_service_contact",
+        "observed_ssh_session",
+        "observed_reverse_shell"
+      ]
+    ]
+  },
+  "native_wazuh": {
+    "native_wazuh": "4.14.7",
+    "regression_rule_ids_passed": [
+      [
+        "119201",
+        "3"
+      ],
+      [
+        "119202",
+        "5"
+      ],
+      [
+        "119203",
+        "8"
+      ],
+      [
+        "119204",
+        "10"
+      ],
+      [
+        "119205",
+        "13"
+      ],
+      [
+        "119206",
+        "12"
+      ],
+      [
+        "119207",
+        "3"
+      ],
+      [
+        "119208",
+        "3"
+      ],
+      [
+        "119209",
+        "8"
+      ],
+      [
+        "119210",
+        "3"
+      ],
+      [
+        "119211",
+        "7"
+      ],
+      [
+        "119212",
+        "5"
+      ],
+      [
+        "119213",
+        "3"
+      ],
+      [
+        "119214",
+        "12"
+      ],
+      [
+        "119215",
+        "12"
+      ],
+      [
+        "119217",
+        "8"
+      ],
+      [
+        "119218",
+        "12"
+      ],
+      [
+        "119219",
+        "8"
+      ],
+      [
+        "119220",
+        "12"
+      ],
+      [
+        "119220",
+        "12"
+      ],
+      [
+        "119200",
+        "0"
+      ],
+      [
+        "119200",
+        "0"
+      ],
+      [
+        "119200",
+        "0"
+      ],
+      [
+        "119200",
+        "0"
+      ]
+    ],
+    "all_four_missing_evidence_flags_fail_closed": true
+  },
+  "native_dashboard": {
+    "native_opensearch": "2.19.3",
+    "fixture_only": true,
+    "windows_lab_verified": false,
+    "import_count": 5,
+    "repeat_import_count": 5,
+    "observed_nodes": [
+      "Quét cổng / khám phá dịch vụ",
+      "Thử sai mật khẩu nhiều lần",
+      "Đăng nhập thành công sau chuỗi thất bại",
+      "Reverse Shell — shell gắn socket đi ra"
+    ],
+    "arrows": 3,
+    "unobserved_followup_hypotheses": 1,
+    "page_errors": []
+  },
+  "limitations": [
+    "No user Windows/DVWA end-to-end validation",
+    "IPv4 RFC1918 callback to SSH source only",
+    "Polling can miss short-lived shell processes; /proc restrictions can reduce visibility",
+    "Single-port contact is context, not attributed Nmap or proven reconnaissance",
+    "Insufficient password failures are context, not a brute-force label",
+    "No C2, unauthorized compromise or privilege escalation claimed",
+    "Next action is a curated hypothesis, not calibrated ML prediction"
+  ]
+}

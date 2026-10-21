@@ -126,18 +126,21 @@ def install_remote(payload):
             {'soc_ai_kind':'http_load','http_rate_exceeded':True,'http_rate_evidence_verified':True,
              'healthy_baseline_observed':True,'service_degradation_observed':True,
              'baseline_comparison_scope':'same_host_ip_port_origin_method_path'},
-            {'soc_ai_kind':'syn_load','syn_rate_evidence_verified':True}]
+            {'soc_ai_kind':'syn_load','syn_rate_evidence_verified':True},
+            {'soc_ai_kind':'reverse_shell_evidence','kernel_process_observation':True,
+             'stdin_stdout_same_socket':True,'native_ssh_session_verified':True,'outgoing_syn_verified':True,
+             'pid':123,'effective_uid':1003,'peer_ip':'198.51.100.10','peer_port':4444}]
         lines = ''.join(json.dumps({'soc_ai_producer': 'soc-ai-live',
             'source_ip': '198.51.100.10', 'target_ip': '192.0.2.10', 'target_host': 'test-host',
             'username': 'test-user', 'flow_count': 1, 'predicted_label': 'PortScan', **s})+'\n' for s in samples)
-        checker = RuleCheck(lines, [*range(119201,119216),119217,119218,119219])
+        checker = RuleCheck(lines, [*range(119201,119216),119217,119218,119219,119220])
         checker.before_restart()
         restarted = True
         restart_manager()
         validation = checker.after_restart()
         write(ready, json.dumps({'version': 'soc-ai-wazuh/0.1', 'log_path': LOCATION,
-            'installed_at_epoch': time.time(), 'rule_ids': [*range(119200,119216),119217,119218,119219],
-            'installer_version': '0.4.13', 'validation': validation}).encode())
+            'installed_at_epoch': time.time(), 'rule_ids': [*range(119200,119216),119217,119218,119219,119220],
+            'installer_version': '0.4.14', 'validation': validation}).encode())
         print('WAZUH_BRIDGE_INSTALLED', flush=True)
     except ManagerRestartInProgress:
         print('RESTART_PENDING: no success marker written; candidate retained to avoid overlapping restarts.',flush=True)

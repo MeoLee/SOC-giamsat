@@ -201,6 +201,7 @@ class Activities:
         self.publish_chains(engine)
         self.publish_http_load(engine)
         self.publish_syn_load(engine)
+        self.publish_process_evidence(engine)
         for case in engine.cases:
             # Publish on stage/status transitions, not once per failed password.
             stages = [s['name'] for s in case['stages']]
@@ -249,6 +250,25 @@ class Activities:
                 if len(encoded(row).encode('utf-8')) > 6000:
                     raise RuntimeError('Correlation event exceeds 6000 bytes; local case/evidence preserved. Shorten metadata before Wazuh delivery.')
                 self.publisher.enqueue(row)
+
+    def publish_process_evidence(self,engine):
+        from lab_correlation import digest
+        if not getattr(engine,'config',{}).get('attack_chain_enabled'):return
+        if not hasattr(self,'process_revisions'):self.process_revisions={}
+        for c in getattr(engine,'cases',[]):
+            for s in c['stages']:
+                if s['name']!='observed_reverse_shell':continue
+                revision=digest(s)
+                if self.process_revisions.get(c['case_id'])==revision:continue
+                row=make_event('reverse_shell_evidence',[self.folder.name,c['case_id'],revision],
+                    **assessment(85,'Kernel shell FDs, exact native SSH session and outgoing SYN; authorization unknown','observed_shell_socket'),
+                    source_ip=c['source_ip'],target_ip=c['target_ip'],target_host=c['target_host'],username=c['username'],
+                    session_id=self.folder.name,event_time=s['end_time'],
+                    **{k:s[k] for k in ('pid','process_id','executable','effective_uid','source_port','peer_ip','peer_port',
+                        'local_ip','local_port','stdin_stdout_same_socket','native_ssh_session_verified','outgoing_syn_verified','kernel_process_observation')},
+                    evidence_ids=s['evidence_ids'][:4],evidence_count=len(s['evidence_ids']),evidence_file=str(engine.snapshot),training_label=None)
+                self.emit(row);self.process_revisions[c['case_id']]=revision
+                print('[PROCESS-EVIDENCE]',safe(c['target_host']),'shell_socket_outbound_verified', 'pid='+str(s['pid']),flush=True)
 
     def publish_syn_load(self,engine):
         from syn_load_detection import syn_cases

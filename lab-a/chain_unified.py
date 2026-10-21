@@ -82,7 +82,7 @@ def reader():
     data['coverage']['transform'][0]['expr']='3000'
     for t in data['coverage']['transform']:
         if t.get('as')=='body':
-            t['expr']=r"'Endpoint evidence scope: '+(datum.d.endpoint_evidence_scope || 'Chưa có thông tin')+'\nChỉ hiển thị bước có bằng chứng đạt điều kiện. Không có stage không chứng minh hành vi không xảy ra; không xác nhận sensor thu đủ mọi packet/log.\nEICAR receiver chỉ ghi thao tác nhận file thử cố định qua SSH, không audit mọi lệnh/SCP. File + VT cần cùng agent, path, hash và FIM alert ID. Kết quả VT đến muộn không tạo bước, không kéo dài episode. Không tự suy ra thực thi, C2, persistence hoặc leo thang. Probe bài lab không chống sửa log.'"
+            t['expr']=r"'Endpoint evidence scope: '+(datum.d.endpoint_evidence_scope || 'Chưa có thông tin')+'\nChỉ hiển thị bước có bằng chứng đạt điều kiện. Không có stage không chứng minh hành vi không xảy ra; không xác nhận sensor thu đủ mọi packet/log.\nEICAR receiver chỉ ghi thao tác nhận file thử cố định qua SSH, không audit mọi lệnh/SCP. File + VT cần cùng agent, path, hash và FIM alert ID. Kết quả VT đến muộn không tạo bước, không kéo dài episode. Không tự suy ra thực thi, C2, persistence hoặc leo thang. Collector process riêng đọc executable, UID, ancestry và FD socket, đối chiếu auth PID/source port và SYN đi ra. Polling IPv4 có thể bỏ sót tiến trình ngắn; không phải audit hoàn chỉnh. Probe bài lab không chống sửa log.'"
     data['evidence']['transform'][0]['expr']='3010'
     for t in data['evidence']['transform']:
         if t.get('as')=='body':
@@ -200,6 +200,7 @@ def objects():
         '\n\n**Điểm:** max điểm hành vi +10 nếu có recon trước +5 nếu có ≥2 nhóm hành vi độc lập; cap 95. Đây là ưu tiên điều tra, không phải xác suất. '
         'EICAR là file thử antivirus: transfer có kiểm chứng = 40; khi VT dương tính liên kết đúng file = base tối thiểu 75 (85 nếu có scan trước). VT là bằng chứng bổ sung, không là bước tấn công mới; không xác nhận infection. '
         '**HTTP:** web flood/áp lực request =45; nghi vấn DoS có baseline khỏe cùng route và suy giảm =75. Đọc request/window, p95,5xx và http_route trong từng bước; High không đồng nghĩa DoS thành công. '
+        'Reverse Shell = base 85 khi shell FD + phiên SSH + SYN đi ra khớp. Tiếp xúc riêng cổng SSH chỉ là ngữ cảnh, không cộng điểm Recon. Không đủ password failures thì không gắn brute-force. '
         'HTTP rate cao là pressure; nghi vấn DoS cần baseline tốt rồi mới có suy giảm 5xx/latency. Không ép mọi cuộc tấn công phải có scan đã quan sát. '
         'Bật monitor rồi thao tác trong Kali Bash. Một bước là ứng viên tạm thời; hết ngưỡng idle (mặc định 90 giây, chờ 95 giây để kiểm thử) thì tự ẩn, không xóa log/alert. Chỉ giữ lâu dài chain có ít nhất hai bước đã quan sát. Chain nhiều bước tạm lắng vẫn được giữ và hiện gợi ý nét đứt; đây là runbook, chưa có xác suất dự đoán được kiểm định. Mỗi nhánh có parent stage IDs và bằng chứng; cùng nguồn/đích/thời gian chưa chứng minh cùng ý đồ hay quan hệ nhân quả. '
         'Event thường tiếp tục xem ở Threat Hunting.'})

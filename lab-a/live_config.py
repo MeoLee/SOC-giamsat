@@ -67,8 +67,8 @@ def load_config(path=None):
     for s in sources:
         if not isinstance(s, dict):
             raise ValueError('Source must be an object')
-        if s.get('kind') not in ('eve', 'auth', 'wazuh', 'web', 'raw', 'endpoint'):
-            raise ValueError('Source kind must be eve, auth, wazuh, web, raw or endpoint')
+        if s.get('kind') not in ('eve', 'auth', 'wazuh', 'web', 'raw', 'endpoint', 'process'):
+            raise ValueError('Source kind must be eve, auth, wazuh, web, raw, endpoint or process')
         for key in ('container', 'path', 'output'):
             if not isinstance(s.get(key), str) or not s[key] or any(ord(c) < 32 for c in s[key]):
                 raise ValueError('Invalid source ' + key)

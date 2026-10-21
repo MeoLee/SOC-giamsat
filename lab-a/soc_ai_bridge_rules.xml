@@ -1,4 +1,4 @@
-<!-- SOC-AI MANAGED v0.4.12; separate from existing lab rules -->
+<!-- SOC-AI MANAGED v0.4.14; separate from existing lab rules -->
 <group name="soc_ai,">
   <rule id="119200" level="0">
     <decoded_as>json</decoded_as>
@@ -123,5 +123,15 @@
     <field name="syn_rate_evidence_verified">^true$</field>
     <description>SOC nghi vấn SYN flood: $(source_ip) đến $(target_ip):$(target_port), $(syn_connection_count) flow SYN duy nhất/$(window_seconds)s. Chưa xác nhận suy giảm dịch vụ hay kết nối half-open.</description>
     <group>soc_ai_syn_pressure,availability,</group>
+  </rule>
+  <rule id="119220" level="12">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^reverse_shell_evidence$</field>
+    <field name="kernel_process_observation">^true$</field>
+    <field name="stdin_stdout_same_socket">^true$</field>
+    <field name="native_ssh_session_verified">^true$</field>
+    <field name="outgoing_syn_verified">^true$</field>
+    <description>SOC Reverse Shell: shell PID $(pid), UID $(effective_uid) trên $(target_host) gắn socket đi ra $(peer_ip):$(peer_port), liên kết phiên SSH user=$(username). Chưa xác nhận truy cập trái phép hoặc leo thang.</description>
+    <group>soc_ai_reverse_shell,execution,</group>
   </rule>
 </group>

@@ -7,6 +7,9 @@ POLICY = 'soc-operational-risk/0.1'
 
 # ATT&CK candidates from observed evidence, not inferred decrypted SSH content.
 STAGE_LABELS = {
+    'ssh_service_contact':('SSH service contact (recon unproven)',None),
+    'observed_ssh_session':('Native SSH session observed',None),
+    'observed_reverse_shell':('Shell with outgoing TCP socket and exact SSH session','T1059.004'),
     'syn_connection_pressure': ('TCP SYN connection pressure (impact unproven)', None),
     'observed_eicar_transfer': ('Verified EICAR test-file transfer (SSH lab receiver)', 'T1105'),
     'observed_auth_failures': ('Authentication failures (context)', None),
@@ -36,7 +39,7 @@ def case_assessment(case):
     stages = case['stages']; names = [s['name'] for s in stages]
     base = {'possible_recon':40, 'possible_password_guessing':65,
              'suspicious_login_sequence':85, 'possible_web_sqli':60,
-             'observed_eicar_transfer':40}[case['status']]
+             'observed_eicar_transfer':40,'observed_reverse_shell':85}[case['status']]
     bonus = 10 if 'possible_recon' in names and len(names) > 1 else 0
     score = min(95, base+bonus)
     nodes = []

@@ -9,6 +9,8 @@ def episodes(events,config):
     from lab_correlation import instant
     from lab_recon import scan_evidence
     from lab_campaign import http_cases
+    from lab_process_chain import with_callback_proofs
+    events=with_callback_proofs(events)
     scans=scan_evidence(events,config)
     proof_ids={i for s in scans for i in s['recon_evidence_ids']}
     from syn_load_detection import syn_cases
@@ -27,7 +29,7 @@ def episodes(events,config):
                 roots.append(instant(s['recon_window_start']));root_start=t
             last_scan=t
         anchors=sorted((e for e in rows if e['event_id'] in proof_ids or e['event_id'] in http_ids
-            or e['kind'].startswith('auth.') or e['kind'] in ('process.execution','file.transfer','file.eicar_received','web.sqli_indicator')),
+            or e['kind'].startswith('auth.') or e['kind'] in ('process.shell_socket','process.execution','file.transfer','file.eicar_received','web.sqli_indicator')),
             key=lambda e:(instant(e['event_time']),e['event_id']))
         if not anchors:continue
         boundaries=[];previous=None;start=None

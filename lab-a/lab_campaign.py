@@ -13,13 +13,13 @@ DEFAULTS = {'attack_chain_enabled': False, 'chain_max_seconds': 900,
             'http_slow_us': 1000000, 'http_baseline_minimum': 10,
             'http_baseline_maximum':20,'http_latency_multiplier':5,'http_pressure_gap_us':500000,
             'chain_idle_seconds':90,'chain_rescan_gap_seconds':30}
-CATEGORIES = {'syn_connection_pressure':'availability_pressure','observed_auth_failures':'authentication_observation','possible_recon': 'reconnaissance',
+CATEGORIES = {'ssh_service_contact':'authentication_observation','observed_ssh_session':'authentication_observation','observed_reverse_shell':'execution','syn_connection_pressure':'availability_pressure','observed_auth_failures':'authentication_observation','possible_recon': 'reconnaissance',
     'observed_eicar_transfer':'test_file_transfer',
     'repeated_auth_failures': 'credential_access', 'auth_success_after_failures': 'credential_access',
     'observed_shell_execution': 'execution', 'observed_file_transfer': 'transfer',
     'possible_web_sqli': 'web_exploitation_attempt',
     'http_request_pressure': 'availability_pressure', 'possible_http_dos': 'availability_degradation'}
-BASE = {'syn_connection_pressure':50,'observed_auth_failures':15,'possible_recon': 40, 'repeated_auth_failures': 65, 'auth_success_after_failures': 85,
+BASE = {'ssh_service_contact':0,'observed_ssh_session':0,'observed_reverse_shell':85,'syn_connection_pressure':50,'observed_auth_failures':15,'possible_recon': 40, 'repeated_auth_failures': 65, 'auth_success_after_failures': 85,
         'observed_eicar_transfer':40,
         'observed_shell_execution': 85, 'observed_file_transfer': 85,
         'possible_web_sqli': 60, 'http_request_pressure': 45, 'possible_http_dos': 75}
@@ -184,7 +184,10 @@ def stage_detail(stage):
                 'baseline_p95_us','burst_p50_us','burst_p95_us','slow_us','latency_multiplier','baseline_comparison_scope',
                 'artifact_bytes','transfer_url','artifact_path','artifact_sha256','artifact_md5',
                 'transfer_method','source_port','test_artifact','executed','vt_status',
-                'fim_alert_id','vt_alert_id','vt_rule_id','vt_positives','vt_report_time'):
+                'fim_alert_id','vt_alert_id','vt_rule_id','vt_positives','vt_report_time',
+                'pid','process_id','executable','real_uid','effective_uid','session_uid','sshd_pids',
+                'peer_ip','peer_port','local_ip','local_port','native_ssh_session_verified','outgoing_syn_verified',
+                'callback_process_count','connection_count','reconnaissance_proven','telemetry_trust'):
         if key in s: line+='; '+key+'='+str(s[key])
     return line
 
@@ -209,6 +212,13 @@ def wire_events(chain, session_id, evidence_file, runtime=None):
                 'evidence_count':len(s['evidence_ids']),'evidence_ids':s['evidence_ids'][:4],
                 'stage_details':stage_detail(s),'candidate_technique':STAGE_LABELS[s['name']][1] or 'unmapped',
                 'confirmed_compromise':False,'prediction_is_not_ground_truth':True}
+        if s['name']=='observed_reverse_shell':
+            fields.update({k:s[k] for k in ('pid','process_id','executable','real_uid','effective_uid','session_uid',
+                'source_port','sshd_pids','peer_ip','peer_port','local_ip','local_port','socket_inode',
+                'stdin_stdout_same_socket','native_ssh_session_verified','outgoing_syn_verified','kernel_process_observation',
+                'callback_process_count','telemetry_trust')})
+        if s['name']=='ssh_service_contact':
+            fields.update({k:s[k] for k in ('target_port','connection_count','reconnaissance_proven','detection_method','limitation')})
         if s['name']=='syn_connection_pressure':
             fields.update({k:s[k] for k in ('syn_connection_count','threshold','window_seconds','target_port','sensor_id','handshake_completion_verified','service_degradation_observed','detection_method','limitation')})
         if s['name']=='observed_eicar_transfer':
@@ -237,6 +247,7 @@ def wire_events(chain, session_id, evidence_file, runtime=None):
         'techniques':';'.join(dict.fromkeys(STAGE_LABELS[n][1] for n in names if STAGE_LABELS[n][1])) or 'unmapped',
         'endpoint_evidence_scope':'controlled_lab_probe_only' if any(n in ('observed_shell_execution','observed_file_transfer','observed_eicar_transfer') for n in names) else 'no_endpoint_probe',
         'chain_duration_seconds':round((instant(c['last_seen'])-instant(c['first_seen'])).total_seconds(),6)}
+    if 'observed_reverse_shell' in names:fields['endpoint_evidence_scope']='kernel_proc_ssh_pid_fd_outgoing_syn'
     # Stage documents are queued first; the summary points to their revision IDs.
     summary=make_event('attack_chain',[session_id,c['chain_id'],digest(c)],**fields)
     # The revision list can grow without bound on large cases. Keep an explicit
