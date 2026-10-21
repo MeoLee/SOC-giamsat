@@ -57,8 +57,14 @@ def lifecycle(chain,config,now=None):
     now=now or datetime.now(timezone.utc)
     elapsed=(now-instant(chain['last_seen'])).total_seconds()
     state='clock_skew' if elapsed < -5 else 'quiescent' if elapsed>=config['chain_idle_seconds'] else 'waiting' if elapsed>=15 else 'active'
-    return {'chain_status':state,'chain_idle_seconds':config['chain_idle_seconds'],
+    formed=len(chain['stages'])>=2
+    expired=state=='quiescent' and not formed
+    return {'chain_status':'expired_singleton' if expired else state,
+            'chain_active':not expired,
+            'chain_display_state':'formed' if formed else 'expired_singleton' if expired else 'pending_singleton',
+            'chain_expiration_reason':'single_observed_stage_idle_timeout' if expired else '',
+            'chain_idle_seconds':config['chain_idle_seconds'],
             'chain_evaluated_at':now.isoformat(timespec='microseconds'),
             'chain_end_proven':False,'next_step_method':'curated_evidence_runbook',
             'next_step_probability_calibrated':False,
-            'next_step_ready':state=='quiescent'}
+            'next_step_ready':state=='quiescent' and formed}

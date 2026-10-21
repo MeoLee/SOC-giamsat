@@ -2,7 +2,7 @@ import contextlib,io,json,tempfile,unittest
 from pathlib import Path
 from types import SimpleNamespace
 from lab_campaign import build_chains,http_cases,wire_events,validate
-from lab_correlation import DEFAULTS,build_cases,digest
+from lab_correlation import DEFAULTS,build_cases,digest,instant
 from test_lab_correlation import sequence,scan,time_at
 CONFIG={**DEFAULTS,'attack_chain_enabled':True}
 def http(t,i=0,status=200,duration=2000,sql=False,**changes):
@@ -54,8 +54,8 @@ class CampaignTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);a=Activities(root,None);before=chains([http(55,sql=True)]);after=chains(scan()+[http(55,sql=True)])
             with contextlib.redirect_stdout(io.StringIO()):
-                a.publish_chains(SimpleNamespace(chains=before,snapshot=root/'cases.json'))
-                a.publish_chains(SimpleNamespace(chains=after,snapshot=root/'cases.json'))
+                a.publish_chains(SimpleNamespace(chains=before,snapshot=root/'cases.json',evaluated_at=instant(before[0]['last_seen'])))
+                a.publish_chains(SimpleNamespace(chains=after,snapshot=root/'cases.json',evaluated_at=instant(after[0]['last_seen'])))
             rows=[json.loads(line) for line in a.path.read_text().splitlines()]
             retired=[r for r in rows if r.get('chain_active') is False]
             self.assertEqual(len(retired),1);self.assertEqual(retired[0]['superseded_by'],[after[0]['chain_id']])

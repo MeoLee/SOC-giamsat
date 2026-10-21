@@ -1,0 +1,80 @@
+{
+  "isolated_fixture_validation": true,
+  "windows_live_validation": false,
+  "first_import_count": 5,
+  "repeat_import_count": 5,
+  "singleton_without_new_log": {
+    "before": {
+      "records": 1,
+      "active": 1,
+      "selected": 1,
+      "nodes": 1,
+      "edges": 0,
+      "future": 0
+    },
+    "after_95_seconds": {
+      "records": 0,
+      "active": 0,
+      "selected": 0,
+      "nodes": 0,
+      "edges": 0,
+      "future": 0
+    },
+    "auto_refresh_paused": true,
+    "index_documents_deleted": false
+  },
+  "formed_after_one_hour": {
+    "before": {
+      "records": 1,
+      "active": 1,
+      "selected": 1,
+      "nodes": 2,
+      "edges": 1,
+      "future": 1
+    },
+    "after": {
+      "records": 1,
+      "active": 1,
+      "selected": 1,
+      "nodes": 2,
+      "edges": 1,
+      "future": 1
+    },
+    "risk_score": 70
+  },
+  "latest_inactive_not_resurrected": {
+    "records": 0,
+    "active": 0,
+    "selected": 0,
+    "nodes": 0,
+    "edges": 0,
+    "future": 0
+  },
+  "backend_expired_hidden": {
+    "records": 0,
+    "active": 0,
+    "selected": 0,
+    "nodes": 0,
+    "edges": 0,
+    "future": 0
+  },
+  "page_errors": [],
+  "failed_shards": [],
+  "native_history_query_observed": true,
+  "release": "0.4.9.2",
+  "date": "2026-10-21",
+  "unit_suite": {
+    "run": 430,
+    "failed": 0,
+    "skipped": 2,
+    "skipped_reason": "Windows filesystem integration requires Windows"
+  },
+  "retention_policy": {
+    "minimum_observed_stages_to_retain": 2,
+    "default_idle_seconds": 90,
+    "test_wait_seconds": 95,
+    "predicted_nodes_count_as_observed": false,
+    "delete_alerts_or_raw_logs": false
+  },
+  "rule_model_or_threshold_changed": false
+}

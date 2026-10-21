@@ -13,11 +13,32 @@ READER_ID='soc-ai-attack-chain-reader-v2'
 POLICY_ID='soc-ai-attack-chain-guide-v2'
 SEARCH_ID='soc-ai-attack-chain-evidence-v2'
 QUERY='data.soc_ai_producer: "soc-ai-live" and data.soc_ai_kind: ("attack_chain" or "chain_stage")'
+# Select latest per chain/session first, then apply retention. Numeric conversion
+# is intentional: Wazuh stores dynamic numeric fields as keyword strings too.
+VISIBLE_EXPR=("toString(datum.d.chain_active)!='false' && ("
+              "toNumber(datum.d.attack_chain_stage_count)>=2 || ("
+              "toNumber(datum.d.attack_chain_stage_count)==1 && "
+              "isValid(toDate(datum.d.chain_last_seen_at || datum.d.event_time)) && "
+              "visibilityNow-toNumber(toDate(datum.d.chain_last_seen_at || datum.d.event_time))"
+              "<1000*toNumber(datum.d.chain_idle_seconds || 90)))")
+# History stores revisions of formed chains only. Excluding exact zero/one
+# works with keyword counts ('10' must not compare lexically below '2').
+HISTORY_QUERY=QUERY+' and data.attack_chain_stage_count: * and not data.attack_chain_stage_count: ("0" or "1")'
+
+
+def visibility_clock():
+    # Expire old/stopped-session singletons even if no new event arrives and
+    # dashboard auto refresh is paused. No browser deletion or index mutation.
+    return {'name':'visibilityNow','init':'now()',
+            'on':[{'events':{'type':'timer','throttle':1000},'update':'now()'}]}
+
 
 
 def reader():
     v=copy.deepcopy(reader_spec(latest_source_sort()))
     data={d['name']:d for d in v['data']}
+    v['signals'].append(visibility_clock())
+    data['records']['transform'].append({'type':'filter','expr':VISIBLE_EXPR})
     cases=data['records']['url']['body']['aggs']['cases']
     cases['filter']['bool']['filter'][1]['term']['data.soc_ai_kind']='attack_chain'
     # Last revision must be selected BEFORE applying active state. Otherwise an
@@ -80,7 +101,7 @@ def reader():
         for child in mark.get('marks',[]):
             text=child.get('encode',{}).get('update',{}).get('text',{})
             if 'signal' in text and "length(data('records'))==0" in text['signal']:
-                text['signal']="length(data('records'))==0 ? 'Chưa có chain trong thời gian/bộ lọc này.' : length(data('records'))>1 ? 'Bấm Chain ID ở danh sách để mở đúng hồ sơ và phiên.' : length(data('selected'))==0 ? 'Chain này đã được thay thế hoặc ngừng hoạt động. Quay lại danh sách tất cả chain.' : ''"
+                text['signal']="length(data('records'))==0 ? 'Chưa có chain trong thời gian/bộ lọc này.' : length(data('records'))>1 ? 'Bấm Chain ID ở danh sách để mở đúng hồ sơ và phiên.' : length(data('selected'))==0 ? 'Ứng viên một bước đã hết thời gian chờ hoặc chain đã được thay thế. Quay lại danh sách tất cả chain.' : ''"
     return v
 
 
@@ -93,9 +114,10 @@ def listing():
           ('Risk score',.51,'risk_score'),('Stage count',.61,'attack_chain_stage_count'),('Categories',.72,'categories')]
     return {'$schema':'https://vega.github.io/schema/vega/v5.json','padding':10,
         'autosize':{'type':'fit','contains':'padding'},'config':{'kibana':{'renderer':'svg'}},
-        'signals':[{'name':'page','value':0,'on':[
+        'signals':[visibility_clock(),{'name':'page','value':0,'on':[
             {'events':'@next:click','update':"min(page+1,max(0,ceil(length(data('active'))/8)-1))"},
-            {'events':'@prev:click','update':'max(0,page-1)'}]}],
+            {'events':'@prev:click','update':'max(0,page-1)'},
+            {'events':{'signal':'visibilityNow'},'update':"min(page,max(0,ceil(length(data('active'))/8)-1))"}]}],
         'data':[source,{'name':'active','source':'records','transform':[
             {'type':'filter','expr':"toString(datum.d.chain_active)!='false'"},
             {'type':'collect','sort':{'field':'d.event_time','order':'descending'}},
@@ -115,13 +137,13 @@ def listing():
             {'name':'next','type':'text','encode':{'update':{'x':{'value':100},'y':{'value':308},
                 'text':{'value':'Sau ▶'},'cursor':{'value':'pointer'},'fill':{'value':'#006bb4'}}}},
             {'type':'text','encode':{'update':{'x':{'value':200},'y':{'value':308},'text':{
-                'signal':"'Trang '+(page+1)+' | '+length(data('active'))+' chain/phiên đang hoạt động (tối đa 100 ID × 10 phiên; lọc thời gian nếu cần)'"},'fontSize':{'value':11}}}}]}
+                'signal':"'Trang '+(page+1)+' | '+length(data('active'))+' chain/ứng viên đang hiển thị (tối đa 100 ID × 10 phiên; lọc thời gian nếu cần)'"},'fontSize':{'value':11}}}}]}
 
 
 def workspace():
     v=reader(); table=listing()
     # A single Vega view keeps selection/loading state local to one panel.
-    v['signals']+=table['signals']+[{'name':'chainClicked','value':None,'on':[{'events':'@chainSelect:click','force':True,'update':"opensearchDashboardsAddFilter({bool:{filter:[{match_phrase:{'data.chain_id':datum.d.chain_id}},{match_phrase:{'data.session_id':datum.d.session_id}}]}}, '"+'wazuh-alerts-*'+"', 'Chain / Session')"}]}]
+    v['signals']+=[s for s in table['signals'] if s['name']!='visibilityNow']+[{'name':'chainClicked','value':None,'on':[{'events':'@chainSelect:click','force':True,'update':"opensearchDashboardsAddFilter({bool:{filter:[{match_phrase:{'data.chain_id':datum.d.chain_id}},{match_phrase:{'data.session_id':datum.d.session_id}}]}}, '"+'wazuh-alerts-*'+"', 'Chain / Session')"}]}]
     v['data']+=table['data'][1:]
     for mark in v['marks']:
         if mark.get('type')=='group':
@@ -157,13 +179,13 @@ def workspace():
     return add_graph(v)
 
 def objects():
-    query={'query':{'language':'kuery','query':QUERY},'filter':[], 'indexRefName':'index'}
+    query={'query':{'language':'kuery','query':HISTORY_QUERY},'filter':[], 'indexRefName':'index'}
     index={'type':'index-pattern','id':INDEX_ID,'references':[],'attributes':{
         'title':'wazuh-alerts-*','timeFieldName':'timestamp','fields':encoded([
             {'name':x,'type':'date' if x=='timestamp' else 'string',
              'esTypes':['date' if x=='timestamp' else 'keyword'],'aggregatable':True,
              'searchable':True,'readFromDocValues':True} for x in ['timestamp','data.chain_id','data.branch_id',
-             'data.stage_name','data.chain_revision_id','data.risk_score','data.session_id','data.soc_ai_kind','data.soc_ai_producer']]),
+             'data.stage_name','data.chain_revision_id','data.risk_score','data.attack_chain_stage_count','data.session_id','data.soc_ai_kind','data.soc_ai_producer']]),
         'fieldFormatMap':'{}','allowNoIndex':True}}
     def visual(identifier,title,kind,params):
         return {'type':'visualization','id':identifier,'references':[],'attributes':{
@@ -174,11 +196,11 @@ def objects():
         '[Quay lại tất cả chain và bật refresh](#/view/'+DASHBOARD_ID+'?_a='+quote("(filters:!(),query:(language:kuery,query:''))",safe='')+'&_g='+quote('(refreshInterval:(pause:!f,value:2000))',safe='')+')'+
         '\n\n**Điểm:** max điểm hành vi +10 nếu có recon trước +5 nếu có ≥2 nhóm hành vi độc lập; cap 95. Đây là ưu tiên điều tra, không phải xác suất. '
         'HTTP rate cao là pressure; nghi vấn DoS cần baseline tốt rồi mới có suy giảm 5xx/latency. Không ép mọi cuộc tấn công phải có scan đã quan sát. '
-        'Bật monitor rồi thao tác trong Kali Bash. Sau 90 giây không có hành vi mới, chain tạm lắng và hiện gợi ý nét đứt; đây là runbook theo bằng chứng, chưa có xác suất dự đoán được kiểm định. Mỗi nhánh có parent stage IDs và bằng chứng; các nhánh cùng nguồn/đích/thời gian chưa chứng minh cùng ý đồ hay quan hệ nhân quả. '
+        'Bật monitor rồi thao tác trong Kali Bash. Một bước là ứng viên tạm thời; hết ngưỡng idle (mặc định 90 giây, chờ 95 giây để kiểm thử) thì tự ẩn, không xóa log/alert. Chỉ giữ lâu dài chain có ít nhất hai bước đã quan sát. Chain nhiều bước tạm lắng vẫn được giữ và hiện gợi ý nét đứt; đây là runbook, chưa có xác suất dự đoán được kiểm định. Mỗi nhánh có parent stage IDs và bằng chứng; cùng nguồn/đích/thời gian chưa chứng minh cùng ý đồ hay quan hệ nhân quả. '
         'Event thường tiếp tục xem ở Threat Hunting.'})
     detail=visual(READER_ID,'Attack Chain — danh sách, các nhánh và hồ sơ','vega',{'spec':encoded(workspace())})
     search={'type':'search','id':SEARCH_ID,'references':[{'name':'index','type':'index-pattern','id':INDEX_ID}],
-        'attributes':{'title':'Revision và bằng chứng Chain — mở dòng để đọc JSON','version':1,
+        'attributes':{'title':'Lịch sử chain từ hai bước — mở dòng để đọc JSON','version':1,
             'columns':['data.chain_id','data.branch_id','data.stage_name','data.risk_score','data.chain_revision_id'],
             'sort':[['timestamp','desc']], 'kibanaSavedObjectMeta':{'searchSourceJSON':encoded(query)}}}
     panels=[];refs=[];y=0

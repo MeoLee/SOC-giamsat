@@ -1,5 +1,8 @@
 # Nhóm 1 — Hành động đơn lẻ từ Kali Bash
 
+Từ [0.4.9.2](../CHAIN-RETENTION-0492-VI.md), bài chỉ có một bước sẽ tự ẩn khỏi
+Attack Chain dashboard sau idle timeout; alert và raw vẫn giữ để đối chiếu.
+
 Làm [chuẩn bị](00-PREPARE-VI.md), bật monitor và mở Kali Bash trước. Biến
 `TARGET=172.20.0.3`, `SOURCE=172.20.0.4`, `LABUSER=soctest`. Mỗi bài độc lập:
 chờ 95 giây sau bài trước, hoặc mở capture mới nếu đang làm báo cáo đối chứng.

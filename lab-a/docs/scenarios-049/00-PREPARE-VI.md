@@ -168,11 +168,13 @@ sau hành vi cuối rồi bắt đầu lại bằng Nmap. Không chạy hai bài
 không có session/process evidence để phân biệt vẫn chỉ là giả thuyết liên quan;
 không thể cam kết phân biệt hai hacker cùng NAT bằng các log này.
 
-Status: `active` → `waiting` → `quiescent`. Sau 90 giây không còn bằng chứng
-liên quan, hiện giả thuyết bước tiếp theo theo từng nhánh terminal. Tạm lắng
-**không chứng minh cuộc tấn công kết thúc**; log đến trễ có thể tạo revision
-mới. `chain_active` dùng để đánh dấu case còn được giữ, khác với status hoạt
-động: case quiescent vẫn nằm trong danh sách và không bị xóa.
+Từ bản [0.4.9.2](../CHAIN-RETENTION-0492-VI.md), một bước là ứng viên tạm thời:
+hết 90 giây idle mặc định thì `expired_singleton`, tự ẩn khỏi dashboard, giữ
+nguyên log/alert. Chain có ít nhất hai bước thì `active` → `waiting` →
+`quiescent`, vẫn lưu và hiện giả thuyết theo nhánh terminal. Tạm lắng **không
+chứng minh cuộc tấn công kết thúc**; log đến trễ trong episode cũ có thể bổ
+sung bằng chứng và tạo revision. `chain_active=false` dành cho ứng viên hết
+hạn hoặc case bị thay thế; chain nhiều bước quiescent vẫn được giữ.
 
 Gợi ý là runbook từ bằng chứng, không phải mô hình next-action đã train/hiệu
 chỉnh. Không có xác suất % được kiểm định, không ép phải đi đủ mọi bước của

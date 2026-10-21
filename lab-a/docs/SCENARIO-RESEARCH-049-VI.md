@@ -1,5 +1,7 @@
 # Lab A 0.4.9 — kết quả nghiên cứu kịch bản và hướng dẫn test
 
+**Chính sách dashboard mới:** [0.4.9.2 tự ẩn ứng viên một bước hết hạn, giữ chain từ hai bước](CHAIN-RETENTION-0492-VI.md).
+
 **Cập nhật bộ cài:** áp dụng [bản vá 0.4.9.1](WAZUH-INSTALLER-FIX-0491-VI.md) trước khi chạy
 `setup_wazuh.py` hoặc `setup_scenario_rules.py`; giữ các bước vận hành bên dưới.
 

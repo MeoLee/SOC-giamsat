@@ -224,7 +224,8 @@ def wire_events(chain, session_id, evidence_file, runtime=None):
     from wazuh_bridge import make_event
     c=chain; revision=digest(c); stages=c['stages'];eids={eid for s in stages for eid in s['evidence_ids']}
     common=dict(chain_id=c['chain_id'],session_id=session_id,source_ip=c['source_ip'],target_ip=c['target_ip'],
-                target_host=c['target_host'],evidence_file=str(evidence_file),chain_schema=c['schema_version'],chain_revision_id=revision)
+                target_host=c['target_host'],evidence_file=str(evidence_file),chain_schema=c['schema_version'],chain_revision_id=revision,
+                attack_chain_stage_count=len(stages),chain_formed=len(stages)>=2)
     docs=[]
     for s in stages:
         # Evidence reference arrays are samples; the case snapshot has every ID.

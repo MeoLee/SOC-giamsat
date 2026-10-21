@@ -11,7 +11,8 @@ import subprocess
 import zipfile
 
 
-REQUIRED = {'wazuh_install_checks.py', 'test_wazuh_install_checks.py',
+REQUIRED = {'test_chain_retention.py', 'docs/CHAIN-RETENTION-0492-VI.md',
+            'docs/validation-0492.json', 'wazuh_install_checks.py', 'test_wazuh_install_checks.py',
             'docs/WAZUH-INSTALLER-FIX-0491-VI.md', 'docs/validation-0491.json', 'soc_ai/web/dashboard.html', 'soc_ai/predict.py', 'soc_ai/train.py',
             'run_checks.py', 'Setup-AI.ps1', 'test_context_runtime.py',
             'lab_recon.py', 'setup_recon.py', 'soc-recon.rules', 'test_lab_recon.py',
