@@ -110,7 +110,7 @@ class FlowObserver:
                 raise RuntimeError('Prediction/input identity mismatch')
             self.counts[prediction['decision']] += 1
             if prediction.get('predicted_label'):
-                self.counts['label:' + prediction['predicted_label']] += 1
+                self.counts['label:' + prediction.get('predicted_label_display', prediction['predicted_label'])] += 1
             outputs.append({**prediction, 'collected_at': now(),
                 'model_directory': self.model_path, 'model_weights_sha256': self.weights_hash,
                 'source_container': event.get('_soc_source_container', 'ubuntu-endpoint'),

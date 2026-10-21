@@ -5,7 +5,7 @@ import math
 from pathlib import Path
 import numpy as np
 import torch
-from .common import CLASSES,digest,read_json,sha256
+from .common import display_label,CLASSES,digest,read_json,sha256
 from .flow import FEATURE_HASH,FEATURE_NAMES,normalize,features,transform,validate_preprocessor,_numeric_array
 from .model import FlowMLP,load_weights
 from .model import predict_batches
@@ -120,7 +120,8 @@ class Predictor:
             for position,p in zip(positions,probs):
                 score=1.0-float(p[0]); threshold=self.metadata['attack_score_threshold']
                 label=CLASSES[int(p.argmax())]
-                outputs[position].update({'predicted_label':label,'attack_score':score,
+                outputs[position].update({'predicted_label':label,'predicted_label_display':display_label(label),
+                    'class_scores_display':{display_label(c):float(v) for c,v in zip(CLASSES,p)},'attack_score':score,
                     'attack_score_threshold':threshold,'softmax_scores_calibrated':False,
                     'decision':'possible_attack' if score>=threshold else 'below_alert_threshold',
                     'class_scores':dict(zip(CLASSES,[float(v) for v in p]))})

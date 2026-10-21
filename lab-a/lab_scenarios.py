@@ -202,7 +202,7 @@ def replay(directory):
         signals = context.snapshot()['signals']
         check(name, any(row['kind'] == 'context.http_request_rate' for row in signals) == expected,
             {'requests': count, 'threshold_explicit_for_fixture': 20,
-             'notice': 'One-source rate signal is not a validated DDoS classifier.'})
+             'notice': 'One-source rate signal is not a validated DoS classifier.'})
 
     normalized = normalize(flow())
     check('flow-id-no-float-loss', normalized['flow_id'] == str(10**18), normalized['flow_id'])

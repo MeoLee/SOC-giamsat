@@ -54,14 +54,16 @@ class Activities:
 
     def prediction(self, event, prediction):
         src, dst = event['src_ip'], event['dest_ip']
-        label = prediction.get('predicted_label', prediction.get('reason', 'unknown'))
+        from soc_ai.common import display_label
+        model_label = prediction.get('predicted_label', prediction.get('reason', 'unknown'))
+        label = display_label(model_label)
         # Group only within a sensor/source and outcome; never merge different targets.
         key = (event.get('_soc_source_file', ''), src, dst, event.get('proto'),
                event.get('app_proto', 'unknown'), label, prediction['decision'])
         if key not in self.groups:
             self.groups[key] = {'source_ip': src, 'target_ip': dst,
                 'protocol': event.get('proto', 'unknown'), 'application': event.get('app_proto', 'unknown'),
-                'predicted_label': label, 'decision': prediction['decision'], 'flow_count': 0,
+                'predicted_label': label, 'model_predicted_label': model_label, 'decision': prediction['decision'], 'flow_count': 0,
                 'destination_port_min': event.get('dest_port'), 'destination_port_max': event.get('dest_port'),
                 'score_max': None, 'source_file': event.get('_soc_source_file', 'suricata-eve.jsonl'),
                 'model_weights_sha256': prediction.get('model_weights_sha256', ''),

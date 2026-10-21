@@ -27,7 +27,7 @@ SCENARIOS = {
     'chain':('32-port recon, eight wrong passwords, then one correct login in one Live session', ['119203','119204','119205']),
     'chain-extended':('Same SSH chain, then instrumented fixed shell execution and verified benign file transfer', ['119203','119204','119205']),
     'web-sqli':('One SQL syntax indicator GET against DVWA; exploitation is not asserted', ['119209','119206']),
-    'http-burst':('At most 50 GETs, at most 5 per second, 10-second start window; not a DDoS label', ['119210']),
+    'http-burst':('At most 50 GETs, at most 5 per second, 10-second start window; not a DoS label', ['119210']),
 }
 RECON_CONTROLS=frozenset(('normal-http','http-burst','single-port','normal-ssh',
                           'ssh-negative','ssh-burst','ssh-success','web-sqli'))

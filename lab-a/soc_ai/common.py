@@ -5,6 +5,12 @@ from .fileio import atomic_writer,read_bytes
 
 CLASSES = ['BENIGN','FTP-Patator','SSH-Patator','Bot','PortScan','DDoS']
 
+def display_label(label):
+    """Presentation alias only; keep trained class indices and raw scores intact."""
+    return 'DoS' if label == 'DDoS' else label
+
+DISPLAY_CLASSES = [display_label(label) for label in CLASSES]
+
 def write_json(path, obj):
     path=Path(path)
     payload=json.dumps(obj,indent=2,ensure_ascii=False,allow_nan=False).encode('utf-8')
