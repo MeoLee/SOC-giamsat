@@ -1,5 +1,8 @@
 # 0.4.9 — Chuẩn bị và cách vận hành bằng Kali Bash
 
+**Cập nhật bộ cài:** áp dụng [bản vá 0.4.9.1](../WAZUH-INSTALLER-FIX-0491-VI.md) trước khi chạy
+`setup_wazuh.py` hoặc `setup_scenario_rules.py`; giữ các bước vận hành bên dưới.
+
 Tài liệu dựa trên `kich_ban.txt` người dùng gửi; đã đối chiếu ruleset Wazuh
 4.14.7 và mã nguồn Lab A. Đây là bản sửa đề xuất kiểm thử, không phải báo cáo
 các cuộc tấn công đã thành công trên máy Windows của bạn.

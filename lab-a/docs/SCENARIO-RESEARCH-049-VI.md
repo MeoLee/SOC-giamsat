@@ -1,5 +1,8 @@
 # Lab A 0.4.9 — kết quả nghiên cứu kịch bản và hướng dẫn test
 
+**Cập nhật bộ cài:** áp dụng [bản vá 0.4.9.1](WAZUH-INSTALLER-FIX-0491-VI.md) trước khi chạy
+`setup_wazuh.py` hoặc `setup_scenario_rules.py`; giữ các bước vận hành bên dưới.
+
 Bản cập nhật tích lũy từ 0.4.6 Doctor-Fix/0.4.8, bổ sung giám sát thao tác
 trực tiếp từ Kali Bash, episode isolation, lifecycle và sơ đồ chain native
 trong một Wazuh dashboard. Không đổi model weights/threshold, không train lại.

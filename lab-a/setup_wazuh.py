@@ -11,6 +11,7 @@ import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
+from wazuh_install_checks import RuleCheck, embedded_support
 
 LOCATION = '/var/ossec/logs/soc-ai/events.jsonl'
 RULE_PATH = '/var/ossec/etc/rules/soc_ai_bridge_rules.xml'
@@ -122,14 +123,14 @@ def install_remote(payload):
         lines = ''.join(json.dumps({'soc_ai_producer': 'soc-ai-live',
             'source_ip': '198.51.100.10', 'target_ip': '192.0.2.10', 'target_host': 'test-host',
             'username': 'test-user', 'flow_count': 1, 'predicted_label': 'PortScan', **s})+'\n' for s in samples)
-        output = run(['/var/ossec/bin/wazuh-logtest'], input=lines.encode())
-        matched = re.findall(r"id:\s*'(1192\d{2})'", output)
-        if matched != [str(i) for i in range(119201, 119215)]:
-            raise RuntimeError('AI rules did not match all fourteen expected IDs; configuration restored')
+        checker = RuleCheck(lines, range(119201, 119215))
+        checker.before_restart()
         restarted = True
         run(['/var/ossec/bin/wazuh-control', 'restart'])
+        validation = checker.after_restart()
         write(ready, json.dumps({'version': 'soc-ai-wazuh/0.1', 'log_path': LOCATION,
-            'installed_at_epoch': time.time(), 'rule_ids': list(range(119200, 119215))}).encode())
+            'installed_at_epoch': time.time(), 'rule_ids': list(range(119200, 119215)),
+            'installer_version': '0.4.9.1', 'validation': validation}).encode())
         print('WAZUH_BRIDGE_INSTALLED', flush=True)
     except BaseException:
         if changed:
@@ -140,13 +141,16 @@ def install_remote(payload):
             else: write(ready, old_ready)
             print('Previous configuration restored.', flush=True)
             if restarted:
-                run(['/var/ossec/bin/wazuh-control', 'restart'])
+                try:
+                    run(['/var/ossec/bin/wazuh-control', 'restart'])
+                except Exception as rollback_error:
+                    print('ROLLBACK_RESTART_FAILED: '+str(rollback_error), flush=True)
         raise
 
 
 def remote_script():
     code = Path(__file__).read_text(encoding='utf-8')
-    return code.rsplit("\nif __name__ == '__main__':", 1)[0]+'\ninstall_remote(json.load(sys.stdin))\n'
+    return embedded_support()+code.rsplit("\nif __name__ == '__main__':", 1)[0]+'\ninstall_remote(json.load(sys.stdin))\n'
 
 
 def main():

@@ -1,5 +1,9 @@
 # SOC-giamsat
 
+- **[0.4.9.1 — Sửa lỗi bộ cài Wazuh/logtest](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.9.1-Installer-Fix-20261021.zip)** (vá lên 0.4.9).
+- [Cách cập nhật, tiếp tục cài và test chain bằng Kali Bash](lab-a/docs/WAZUH-INSTALLER-FIX-0491-VI.md).
+- [Full source 0.4.9.1](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.9.1-Research-20261021.zip).
+
 - **[0.4.9 — Kali Bash thủ công, sơ đồ chain và tách episode](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.9-Manual-Chain-20261021.zip)**
 - [Hướng dẫn đầy đủ, chia theo nhóm](https://github.com/MeoLee/SOC-giamsat/blob/main/lab-a/docs/SCENARIO-RESEARCH-049-VI.md)
 - [Full source 0.4.9](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.9-Research-20261021.zip)

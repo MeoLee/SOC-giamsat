@@ -1,0 +1,32 @@
+{
+  "release": "0.4.9.1",
+  "date": "2026-10-21",
+  "scope": "Installer order and readiness hotfix; 0.4.9 runtime/dashboard/rules unchanged",
+  "unit_suite": {
+    "run": 421,
+    "failed": 0,
+    "skipped": 2,
+    "skipped_reason": "Windows filesystem integration requires Windows"
+  },
+  "installer_regression_tests": {
+    "count": 9,
+    "modern_test_never_runs_before_restart": true,
+    "bounded_connection_retry": true,
+    "rule_mismatch_rejected": true,
+    "stopped_core_process_rejected": true,
+    "bridge_and_scenario_rollback_preserve_original_error": true,
+    "embedded_payload_within_windows_command_line_limit": true
+  },
+  "native_candidate_rules": {
+    "wazuh_version": "4.14.7",
+    "analysisd_running": false,
+    "live_restart_verified": false,
+    "bridge_14_candidates_verified": true,
+    "firewall_candidate_verified": true,
+    "firewall_negative_controls": 2,
+    "modern_logtest_called": false
+  },
+  "windows_docker_desktop_live_install_verified": false,
+  "rule_fixture_checks_establish_live_delivery": false,
+  "dashboard_runtime_validation": "scenarios-049/validation.json"
+}
