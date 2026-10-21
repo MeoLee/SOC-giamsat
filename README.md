@@ -1,5 +1,8 @@
 # SOC-giamsat
 
+- **[0.4.10 — Severity theo bằng chứng và VirusTotal opt-in](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.10-Severity-VT-20261021.zip)** (vá lên 0.4.9.2).
+- [Nghiên cứu severity Wazuh](lab-a/docs/SEVERITY-POLICY-0410-VI.md) · [Một bài VT-01 bằng EICAR](lab-a/docs/VIRUSTOTAL-01-VI.md).
+
 - **[0.4.9.2 — Tự ẩn hành vi đơn lẻ hết hạn, giữ chain nhiều bước](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.9.2-Chain-Retention-20261021.zip)** (vá lên 0.4.9.1).
 - [Cách cập nhật source/dashboard và kiểm tra chính sách lưu chain](lab-a/docs/CHAIN-RETENTION-0492-VI.md).
 

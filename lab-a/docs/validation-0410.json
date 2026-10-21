@@ -1,0 +1,128 @@
+{
+  "release": "0.4.10",
+  "native_version": "Wazuh 4.14.7",
+  "analysisd_config_valid": true,
+  "integratord_config_valid": true,
+  "native_rule_ids_and_levels": [
+    [
+      "119201",
+      "3"
+    ],
+    [
+      "119202",
+      "5"
+    ],
+    [
+      "119203",
+      "8"
+    ],
+    [
+      "119204",
+      "10"
+    ],
+    [
+      "119205",
+      "13"
+    ],
+    [
+      "119206",
+      "12"
+    ],
+    [
+      "119207",
+      "3"
+    ],
+    [
+      "119208",
+      "3"
+    ],
+    [
+      "119209",
+      "8"
+    ],
+    [
+      "119210",
+      "3"
+    ],
+    [
+      "119211",
+      "7"
+    ],
+    [
+      "119212",
+      "5"
+    ],
+    [
+      "119213",
+      "3"
+    ],
+    [
+      "119214",
+      "12"
+    ],
+    [
+      "119215",
+      "12"
+    ],
+    [
+      "119215",
+      "12"
+    ],
+    [
+      "119209",
+      "8"
+    ],
+    [
+      "87105",
+      "12"
+    ],
+    [
+      "87103",
+      "3"
+    ],
+    [
+      "87104",
+      "3"
+    ],
+    [
+      "87102",
+      "3"
+    ],
+    [
+      "87101",
+      "3"
+    ]
+  ],
+  "upstream_integration_sha256": "c0b4cefcea7801ac67cd8100d92c8a7b693dc3c08fc899b93249974964a0b27c",
+  "mock_api_contract": {
+    "hash_lookup_only": true,
+    "http_get_v2": true,
+    "content_upload": false,
+    "positive": true,
+    "unknown_not_safe_verdict": true,
+    "invalid_credentials": true,
+    "source_fim_alert_id_preserved": true
+  },
+  "actual_virustotal_api_called": false,
+  "windows_fim_to_vt_live_verified": false,
+  "date": "2026-10-21",
+  "unit_suite": {
+    "run": 439,
+    "failed": 0,
+    "skipped": 2,
+    "skipped_reason": "Windows filesystem integration requires Windows"
+  },
+  "native_config_key_is_dummy": true,
+  "eicar_vector": {
+    "bytes": 68,
+    "md5": "44d88612fea8a8f36de82e1278abb02f",
+    "sha256": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f"
+  },
+  "native_integration_scope": {
+    "rule_id": "119253",
+    "new_files_only": true,
+    "sample_upload": false,
+    "active_response": false
+  },
+  "critical_rule_added_without_execution_evidence": false
+}

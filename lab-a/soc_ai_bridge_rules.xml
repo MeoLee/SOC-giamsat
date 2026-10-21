@@ -1,4 +1,4 @@
-<!-- SOC-AI MANAGED v0.4.8; separate from existing lab rules -->
+<!-- SOC-AI MANAGED v0.4.10; separate from existing lab rules -->
 <group name="soc_ai,">
   <rule id="119200" level="0">
     <decoded_as>json</decoded_as>
@@ -25,7 +25,7 @@
     <description>SOC AI correlation: possible reconnaissance from $(source_ip) to $(target_ip), priority=$(risk_score).</description>
     <group>soc_ai_correlation,recon,</group>
   </rule>
-  <rule id="119204" level="12">
+  <rule id="119204" level="10">
     <if_sid>119200</if_sid>
     <field name="soc_ai_kind">^correlation$</field>
     <field name="case_status">^possible_password_guessing$</field>
@@ -39,7 +39,7 @@
     <description>SOC AI correlation: successful login after repeated password failures from $(source_ip) for $(username) on $(target_host); investigate. Priority=$(risk_score), chain=$(attack_chain).</description>
     <group>soc_ai_correlation,authentication_success,</group>
   </rule>
-  <rule id="119206" level="8">
+  <rule id="119206" level="12">
     <if_sid>119200</if_sid>
     <field name="soc_ai_kind">^correlation$</field>
     <field name="case_status">^possible_web_sqli$</field>
@@ -89,10 +89,16 @@
     <description>SOC chain evidence: $(chain_id), branch=$(branch_id), stage=$(stage_name).</description>
     <group>soc_ai_chain_stage,</group>
   </rule>
-  <rule id="119214" level="10">
+  <rule id="119214" level="12">
     <if_sid>119212</if_sid>
     <field name="risk_level">^high$</field>
     <description>SOC high-priority attack chain: $(chain_id), risk=$(risk_score). Correlated hypothesis; investigate.</description>
     <group>soc_ai_attack_chain,</group>
+  </rule>
+  <rule id="119215" level="12">
+    <if_sid>119209</if_sid>
+    <field name="signature_id" type="pcre2">^(9900101|9900102)$</field>
+    <description>SOC sensor: SQL injection payload indicator from $(source_ip) to $(target_ip). Attempt observed; exploitation success is not proven.</description>
+    <group>soc_ai_sensor,web,sql_injection,exploit_attempt,</group>
   </rule>
 </group>

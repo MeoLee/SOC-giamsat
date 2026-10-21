@@ -119,18 +119,19 @@ def install_remote(payload):
              'ipv4_truncated_packets':1,'tcp_reassembly_gaps':1,'kernel_drops':0},
             {'soc_ai_kind':'attack_chain','risk_level':'medium'},
             {'soc_ai_kind':'chain_stage','stage_name':'possible_recon'},
-            {'soc_ai_kind':'attack_chain','risk_level':'high'}]
+            {'soc_ai_kind':'attack_chain','risk_level':'high'},
+            {'soc_ai_kind':'sensor_alert','signature_id':9900101}]
         lines = ''.join(json.dumps({'soc_ai_producer': 'soc-ai-live',
             'source_ip': '198.51.100.10', 'target_ip': '192.0.2.10', 'target_host': 'test-host',
             'username': 'test-user', 'flow_count': 1, 'predicted_label': 'PortScan', **s})+'\n' for s in samples)
-        checker = RuleCheck(lines, range(119201, 119215))
+        checker = RuleCheck(lines, range(119201, 119216))
         checker.before_restart()
         restarted = True
         run(['/var/ossec/bin/wazuh-control', 'restart'])
         validation = checker.after_restart()
         write(ready, json.dumps({'version': 'soc-ai-wazuh/0.1', 'log_path': LOCATION,
-            'installed_at_epoch': time.time(), 'rule_ids': list(range(119200, 119215)),
-            'installer_version': '0.4.9.1', 'validation': validation}).encode())
+            'installed_at_epoch': time.time(), 'rule_ids': list(range(119200, 119216)),
+            'installer_version': '0.4.10', 'validation': validation}).encode())
         print('WAZUH_BRIDGE_INSTALLED', flush=True)
     except BaseException:
         if changed:

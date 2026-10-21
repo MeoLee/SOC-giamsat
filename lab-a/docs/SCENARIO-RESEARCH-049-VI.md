@@ -1,5 +1,7 @@
 # Lab A 0.4.9 — kết quả nghiên cứu kịch bản và hướng dẫn test
 
+**Cập nhật tùy chọn 0.4.10:** [severity](SEVERITY-POLICY-0410-VI.md) và [VT-01](VIRUSTOTAL-01-VI.md). VirusTotal vốn được hoãn ở các nhóm 0.4.9 bên dưới; chỉ bật khi làm bài mới này.
+
 **Chính sách dashboard mới:** [0.4.9.2 tự ẩn ứng viên một bước hết hạn, giữ chain từ hai bước](CHAIN-RETENTION-0492-VI.md).
 
 **Cập nhật bộ cài:** áp dụng [bản vá 0.4.9.1](WAZUH-INSTALLER-FIX-0491-VI.md) trước khi chạy
