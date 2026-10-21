@@ -14,6 +14,8 @@ def main():
     parser.add_argument('--http-flood',action='store_true',help='Enable dedicated Apache HTTP-pressure/degradation alerts; requires 0.4.12 Wazuh bridge rules')
     parser.add_argument('--syn-flood',action='store_true',help='Enable unique SYN connection pressure alerts (119219)')
     parser.add_argument('--ssh-contact',action='store_true',help='Enable early neutral SSH contact candidates; requires Wazuh rule119221')
+    parser.add_argument('--ssh-extended',action='store_true',help='Enable subthreshold auth, artifact and detached shell correlation')
+    parser.add_argument('--failure-threshold',type=int,help='Explicit local password-failure policy; does not change model thresholds')
     a=parser.parse_args();load_config(a.config)
     config=read_json(a.config)
     candidate={**config,'correlation':{**DEFAULTS,**config.get('correlation',{}),'attack_chain_enabled':True}}
@@ -26,6 +28,10 @@ def main():
         if not any(s['kind']=='eve' for s in load_config(a.config)['sources']):
             parser.error('SSH contact observations require a Suricata EVE source')
         candidate['correlation']['ssh_contact_observations_enabled']=True
+    if a.ssh_extended:candidate['correlation'].update(ssh_extended_chains_enabled=True,ssh_contact_observations_enabled=True,artifact_observation_enabled=True)
+    if a.failure_threshold is not None:
+        if not 2<=a.failure_threshold<=1000:parser.error('failure-threshold must be 2..1000')
+        candidate['correlation']['failure_threshold']=a.failure_threshold
     # Validate before replacing; write_json itself uses an atomic replacement.
     import tempfile
     with tempfile.TemporaryDirectory() as folder:

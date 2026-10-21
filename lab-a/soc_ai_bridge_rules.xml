@@ -1,4 +1,4 @@
-<!-- SOC-AI MANAGED v0.4.14.1; separate from existing lab rules -->
+<!-- SOC-AI MANAGED v0.4.15; separate from existing lab rules -->
 <group name="soc_ai,">
   <rule id="119200" level="0">
     <decoded_as>json</decoded_as>
@@ -15,7 +15,7 @@
     <if_sid>119200</if_sid>
     <field name="soc_ai_kind">^model_summary$</field>
     <field name="decision">^possible_attack$</field>
-    <description>SOC AI flow: $(model_interpretation). Điểm non-BENIGN tối đa=$(score_max), threshold=$(attack_score_threshold), $(source_ip) to $(target_ip), flows=$(flow_count). Chưa xác nhận tấn công.</description>
+    <description>SOC AI flow: $(model_interpretation). Maximum non-BENIGN score=$(score_max), threshold=$(attack_score_threshold), $(source_ip) to $(target_ip), flows=$(flow_count). Attack is unconfirmed.</description>
     <group>soc_ai_model_prediction,</group>
   </rule>
   <rule id="119203" level="8">
@@ -80,7 +80,7 @@
   <rule id="119212" level="5">
     <if_sid>119200</if_sid>
     <field name="soc_ai_kind">^attack_chain$</field>
-    <description>SOC hồ sơ chuỗi/ứng viên: $(chain_id), stages=$(attack_chain_stage_count), risk=$(risk_score), $(source_ip) to $(target_ip).</description>
+    <description>SOC chain or candidate: $(chain_id), stages=$(attack_chain_stage_count), risk=$(risk_score), $(source_ip) to $(target_ip).</description>
     <group>soc_ai_attack_chain,</group>
   </rule>
   <rule id="119213" level="3">
@@ -106,7 +106,7 @@
     <field name="soc_ai_kind">^http_load$</field>
     <field name="http_rate_exceeded">^true$</field>
     <field name="http_rate_evidence_verified">^true$</field>
-    <description>SOC web flood: áp lực HTTP từ $(source_ip) đến $(target_ip)$(http_route), $(request_count) requests/$(window_seconds)s. Chưa có bằng chứng suy giảm dịch vụ.</description>
+    <description>SOC HTTP pressure: $(source_ip) to $(target_ip)$(http_route), $(request_count) requests/$(window_seconds)s. Service degradation is not established.</description>
     <group>soc_ai_http_pressure,web,</group>
   </rule>
   <rule id="119218" level="12">
@@ -114,31 +114,61 @@
     <field name="healthy_baseline_observed">^true$</field>
     <field name="service_degradation_observed">^true$</field>
     <field name="baseline_comparison_scope">^same_host_ip_port_origin_method_path$</field>
-    <description>SOC nghi vấn HTTP DoS: $(source_ip) đến $(target_ip)$(http_route), requests=$(request_count), 5xx=$(server_5xx_count), p95=$(burst_p95_us)us. Có baseline cùng route; chưa xác nhận nguyên nhân hoặc gián đoạn dịch vụ.</description>
+    <description>SOC possible HTTP DoS: $(source_ip) to $(target_ip)$(http_route), requests=$(request_count), 5xx=$(server_5xx_count), p95=$(burst_p95_us)us. Same-route baseline and degradation observed; causality and outage are unconfirmed.</description>
     <group>soc_ai_http_degradation,web,</group>
   </rule>
   <rule id="119219" level="8">
     <if_sid>119200</if_sid>
     <field name="soc_ai_kind">^syn_load$</field>
     <field name="syn_rate_evidence_verified">^true$</field>
-    <description>SOC nghi vấn SYN flood: $(source_ip) đến $(target_ip):$(target_port), $(syn_connection_count) flow SYN duy nhất/$(window_seconds)s. Chưa xác nhận suy giảm dịch vụ hay kết nối half-open.</description>
+    <description>SOC possible SYN flood: $(source_ip) to $(target_ip):$(target_port), $(syn_connection_count) unique SYN flows/$(window_seconds)s. Half-open connections and service degradation are unconfirmed.</description>
     <group>soc_ai_syn_pressure,availability,</group>
   </rule>
-  <rule id="119220" level="12">
+  <rule id="119220" level="15">
     <if_sid>119200</if_sid>
     <field name="soc_ai_kind">^reverse_shell_evidence$</field>
+    <field name="reverse_shell_behavior_verified">^true$</field>
     <field name="kernel_process_observation">^true$</field>
     <field name="stdin_stdout_same_socket">^true$</field>
-    <field name="native_ssh_session_verified">^true$</field>
     <field name="outgoing_syn_verified">^true$</field>
-    <description>SOC Reverse Shell: shell PID $(pid), UID $(effective_uid) trên $(target_host) gắn socket đi ra $(peer_ip):$(peer_port), liên kết phiên SSH user=$(username). Chưa xác nhận truy cập trái phép hoặc leo thang.</description>
+    <description>SOC CRITICAL reverse-shell behavior: shell PID $(pid), UID $(effective_uid) on $(target_host), outbound socket to $(peer_ip):$(peer_port). Shell I/O and outgoing SYN verified. SSH association=$(ssh_session_link_method). Authorization and privilege escalation are unconfirmed.</description>
     <group>soc_ai_reverse_shell,execution,</group>
   </rule>
   <rule id="119221" level="3">
     <if_sid>119200</if_sid>
     <field name="soc_ai_kind">^ssh_contact$</field>
     <field name="ssh_syn_evidence_verified">^true$</field>
-    <description>SOC tiếp xúc dịch vụ SSH: $(source_ip) đến $(target_ip):22. Đã quan sát SYN, chưa xác định Nmap, mục đích hoặc tấn công. Không chờ completed flow.</description>
+    <description>SOC SSH service contact: $(source_ip) to $(target_ip):22. SYN observed; scanner, intent and attack are unknown. No completed-flow wait.</description>
     <group>soc_ai_ssh_contact,observation,</group>
+  </rule>
+  <rule id="119222" level="15">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^attack_chain$</field>
+    <field name="risk_level">^critical$</field>
+    <field name="reverse_shell_behavior_verified">^true$</field>
+    <description>SOC CRITICAL chain: $(chain_id), verified reverse-shell behavior, stages=$(attack_chain_stage_count), $(source_ip) to $(target_ip). Priority is operational; unauthorized compromise is unconfirmed.</description>
+    <group>soc_ai_critical_chain,</group>
+  </rule>
+  <rule id="119223" level="3">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^artifact_observation$</field>
+    <field name="artifact_action">^file_closed$</field>
+    <description>SOC file observation: $(artifact_path) on $(target_host), SHA256=$(artifact_sha256). File appeared or changed; transport, maliciousness and actor are unconfirmed.</description>
+    <group>soc_ai_artifact_observation,</group>
+  </rule>
+  <rule id="119224" level="7">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^artifact_observation$</field>
+    <field name="artifact_action">^script_execution$</field>
+    <field name="kernel_process_observation">^true$</field>
+    <description>SOC script interpreter observed: $(executable), PID $(pid), script=$(artifact_path), owner=$(username), host=$(target_host). Script intent is unconfirmed.</description>
+    <group>soc_ai_script_execution,</group>
+  </rule>
+  <rule id="119225" level="7">
+    <if_sid>119200</if_sid>
+    <field name="soc_ai_kind">^artifact_observation$</field>
+    <field name="artifact_action">^cron_changed$</field>
+    <description>SOC crontab change: $(artifact_path) on $(target_host). Investigate scheduling changes; persistence and command execution are unconfirmed.</description>
+    <group>soc_ai_cron_observation,</group>
   </rule>
 </group>

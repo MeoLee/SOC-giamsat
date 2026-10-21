@@ -21,7 +21,7 @@ class SeverityVirusTotalTests(unittest.TestCase):
             self.assertEqual(rules[identifier].attrib['level'],str(level))
         self.assertEqual(rules['119215'].findtext('if_sid'),'119209')
         self.assertEqual(rules['119215'].find('field').text,'^(9900101|9900102)$')
-        self.assertFalse(any(int(r.attrib['level'])>=15 for r in rules.values()))
+        self.assertEqual({k for k,r in rules.items() if int(r.attrib['level'])>=15},{'119220','119222'})
 
     def test_vt_config_is_scoped_idempotent_and_keeps_other_integrations(self):
         key='a'*64;before='<ossec_config><integration><name>custom-other</name><api_key>keep-me</api_key></integration></ossec_config>'

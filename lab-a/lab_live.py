@@ -262,7 +262,7 @@ class LiveCollector(Collector):
         heartbeat = getattr(self.args, 'heartbeat_seconds', 0)
         if heartbeat and time.monotonic() - self.last_heartbeat >= heartbeat:
             self.last_heartbeat = time.monotonic()
-            print('LIVE: so du doan=', self.observer.counts['written_predictions'],
+            print('LIVE: written_predictions=', self.observer.counts['written_predictions'],
                   'nhan=', {k[6:]: v for k, v in self.observer.counts.items() if k.startswith('label:')},
                   'correlation_cases=', len(self.correlator.cases) if self.correlator else 0,
                   'loi nguon=', [s['name'] for s in self.state['sources'] if s['last_error']], flush=True)

@@ -1,0 +1,45 @@
+{
+  "version": "0.4.15",
+  "windows_user_lab_verified": false,
+  "unit_regressions": {
+    "tests": 519,
+    "skipped_windows_only": 2
+  },
+  "native_wazuh": {
+    "version": "4.14.7",
+    "rule_sample_matches": 27,
+    "critical_level": 15,
+    "four_missing_proof_controls_cannot_trigger_critical": true
+  },
+  "native_process_fixture": {
+    "native_container": true,
+    "fixed_marker_only": true,
+    "file_closed_observed": true,
+    "script_path_observed": true,
+    "detached_shell_socket_observed": true,
+    "ssh_context_methods": [
+      "environment_hint"
+    ],
+    "windows_lab_verified": false
+  },
+  "native_ui": {
+    "native_opensearch": "2.19.3",
+    "windows_lab_verified": false,
+    "nodes": [
+      "Quét cổng / khám phá dịch vụ",
+      "Các lần sai mật khẩu — ngữ cảnh",
+      "Phiên SSH xác thực thành công",
+      "File script xuất hiện sau SSH — chưa xác minh cách truyền",
+      "Interpreter gọi file script",
+      "Reverse Shell — shell gắn socket đi ra"
+    ],
+    "edges": 5,
+    "selected": [
+      "critical"
+    ],
+    "page_errors": []
+  },
+  "no_interactive_payload_used": true,
+  "model_weights_changed": false,
+  "old_alert_history_rewritten": false
+}

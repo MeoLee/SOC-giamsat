@@ -82,5 +82,5 @@ class ContactTests(unittest.TestCase):
    a=Activities(Path(d),None);out=io.StringIO()
    with contextlib.redirect_stdout(out):
     a.prediction(flow(),{'predicted_label':'BENIGN','decision':'possible_attack','attack_score':.6,'attack_score_threshold':.5});a.flush(force=True)
-   row=json.loads(a.path.read_text().splitlines()[0]);self.assertEqual(row['predicted_label'],'BENIGN');self.assertIn('Chưa xác định loại tấn công',row['model_interpretation']);self.assertEqual(row['score_max'],.6);self.assertEqual(row['attack_score_threshold'],.5);self.assertIn('top_class=BENIGN',out.getvalue());self.assertNotIn('prediction=BENIGN',out.getvalue())
+   row=json.loads(a.path.read_text().splitlines()[0]);self.assertEqual(row['predicted_label'],'BENIGN');self.assertIn('Attack type undetermined',row['model_interpretation']);self.assertEqual(row['score_max'],.6);self.assertEqual(row['attack_score_threshold'],.5);self.assertIn('top_class=BENIGN',out.getvalue());self.assertNotIn('prediction=BENIGN',out.getvalue())
 if __name__=='__main__':unittest.main()

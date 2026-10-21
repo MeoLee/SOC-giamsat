@@ -128,20 +128,24 @@ def install_remote(payload):
              'baseline_comparison_scope':'same_host_ip_port_origin_method_path'},
             {'soc_ai_kind':'syn_load','syn_rate_evidence_verified':True},
             {'soc_ai_kind':'reverse_shell_evidence','kernel_process_observation':True,
-             'stdin_stdout_same_socket':True,'native_ssh_session_verified':True,'outgoing_syn_verified':True,
+             'reverse_shell_behavior_verified':True,'stdin_stdout_same_socket':True,'native_ssh_session_verified':True,'outgoing_syn_verified':True,
              'pid':123,'effective_uid':1003,'peer_ip':'198.51.100.10','peer_port':4444},
-            {'soc_ai_kind':'ssh_contact','ssh_syn_evidence_verified':True}]
+            {'soc_ai_kind':'ssh_contact','ssh_syn_evidence_verified':True},
+            {'soc_ai_kind':'attack_chain','risk_level':'critical','reverse_shell_behavior_verified':True},
+            {'soc_ai_kind':'artifact_observation','artifact_action':'file_closed'},
+            {'soc_ai_kind':'artifact_observation','artifact_action':'script_execution','kernel_process_observation':True},
+            {'soc_ai_kind':'artifact_observation','artifact_action':'cron_changed'}]
         lines = ''.join(json.dumps({'soc_ai_producer': 'soc-ai-live',
             'source_ip': '198.51.100.10', 'target_ip': '192.0.2.10', 'target_host': 'test-host',
-            'username': 'test-user', 'flow_count': 1, 'predicted_label': 'PortScan','model_interpretation':'Ung vien PortScan (chua xac minh)', 'score_max':0.8,'attack_score_threshold':0.5, **s})+'\n' for s in samples)
-        checker = RuleCheck(lines, [*range(119201,119216),119217,119218,119219,119220,119221])
+            'username': 'test-user', 'flow_count': 1, 'predicted_label': 'PortScan','model_interpretation':'PortScan candidate (unverified)', 'score_max':0.8,'attack_score_threshold':0.5, **s})+'\n' for s in samples)
+        checker = RuleCheck(lines, [*range(119201,119216),119217,119218,119219,119220,119221,119222,119223,119224,119225])
         checker.before_restart()
         restarted = True
         restart_manager()
         validation = checker.after_restart()
         write(ready, json.dumps({'version': 'soc-ai-wazuh/0.1', 'log_path': LOCATION,
-            'installed_at_epoch': time.time(), 'rule_ids': [*range(119200,119216),119217,119218,119219,119220,119221],
-            'installer_version': '0.4.14.1', 'validation': validation}).encode())
+            'installed_at_epoch': time.time(), 'rule_ids': [*range(119200,119216),119217,119218,119219,119220,119221,119222,119223,119224,119225],
+            'installer_version': '0.4.15', 'validation': validation}).encode())
         print('WAZUH_BRIDGE_INSTALLED', flush=True)
     except ManagerRestartInProgress:
         print('RESTART_PENDING: no success marker written; candidate retained to avoid overlapping restarts.',flush=True)

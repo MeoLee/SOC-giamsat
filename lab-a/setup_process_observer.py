@@ -22,18 +22,24 @@ for d in (root,folder):
     d.mkdir(parents=True,exist_ok=True)
     if d.parent.stat().st_uid!=0 or d.parent.stat().st_mode&0o022:raise ValueError('Unsafe observer parent '+str(d.parent))
     os.chown(d,0,0);os.chmod(d,0o755 if d==root else 0o700)
+module=root/'artifact_observer.py'
 program=root/'process_observer.py';marker=root/'managed-process-observer.json';health=folder/'health.json';log=folder/'events.jsonl'
-for f in (program,marker,health,log,folder/'service.log'):
+for f in (program,module,marker,health,log,folder/'service.log'):
     if f.is_symlink() or f.exists() and (not f.is_file() or f.stat().st_uid!=0 or f.stat().st_mode&0o022):
         raise ValueError('Unsafe observer file '+str(f))
 code=base64.b64decode(p['code']);compile(code,'process_observer.py','exec')
+modulecode=base64.b64decode(p['artifact_code']);compile(modulecode,'artifact_observer.py','exec')
 previous=json.loads(marker.read_text()) if marker.exists() else {}
 old=program.read_bytes() if program.exists() else None
 if old is not None and old!=code and previous.get('sha256')!=hashlib.sha256(old).hexdigest():
     raise ValueError('Unmanaged/modified observer program; refusing overwrite')
+oldmodule=module.read_bytes() if module.exists() else None
+if oldmodule is not None and oldmodule!=modulecode and previous.get('artifact_module_sha256')!=hashlib.sha256(oldmodule).hexdigest():
+    raise ValueError('Unmanaged artifact module; refusing overwrite')
+oldwatch=False
 # All preflight validation precedes stopping an existing managed process.
 if health.exists():
-    h=json.loads(health.read_text());pid=h.get('observer_pid');proc=Path('/proc')/str(pid)
+    h=json.loads(health.read_text());oldwatch=bool(h.get('artifact_watch_enabled'));pid=h.get('observer_pid');proc=Path('/proc')/str(pid)
     if proc.exists():
         fields=(proc/'stat').read_text().rsplit(') ',1)[1].split();boot=Path('/proc/sys/kernel/random/boot_id').read_text().strip()
         expected=hashlib.sha256(f'{boot}:{pid}:{fields[19]}'.encode()).hexdigest()
@@ -58,12 +64,13 @@ if old is not None:
 oldmarker=marker.read_bytes() if marker.exists() else None
 fd=os.open(log,os.O_WRONLY|os.O_APPEND|os.O_CREAT|os.O_NOFOLLOW,0o640);os.close(fd);os.chown(log,0,0);os.chmod(log,0o640)
 child=None
-def start():
+def start(watch=None):
+    if watch is None:watch=p.get('watch_artifacts',False)
     fd=os.open(folder/'service.log',os.O_WRONLY|os.O_APPEND|os.O_CREAT|os.O_NOFOLLOW,0o600)
-    try:return subprocess.Popen(['python3',str(program)],stdin=subprocess.DEVNULL,stdout=fd,stderr=fd,start_new_session=True,close_fds=True)
+    try:return subprocess.Popen(['python3',str(program)]+(['--watch-artifacts'] if watch else []),stdin=subprocess.DEVNULL,stdout=fd,stderr=fd,start_new_session=True,close_fds=True)
     finally:os.close(fd)
 try:
-    atomic(program,code,0o644);atomic(marker,json.dumps({'sha256':hashlib.sha256(code).hexdigest(),'version':'0.4.14'}).encode(),0o644)
+    atomic(module,modulecode,0o644);atomic(program,code,0o644);atomic(marker,json.dumps({'sha256':hashlib.sha256(code).hexdigest(),'artifact_module_sha256':hashlib.sha256(modulecode).hexdigest(),'version':'0.4.15'}).encode(),0o644)
     child=start();deadline=time.monotonic()+12
     while time.monotonic()<deadline:
         if child.poll() is not None:raise RuntimeError('Observer exited; inspect '+str(folder/'service.log'))
@@ -79,11 +86,13 @@ except BaseException:
         child.terminate()
         try:child.wait(timeout=10)
         except subprocess.TimeoutExpired:raise RuntimeError('Observer still terminating; no overlapping rollback started')
+    if oldmodule is not None:atomic(module,oldmodule,0o644)
+    else:module.unlink(missing_ok=True)
     if old is not None:
         atomic(program,old,0o644)
         if oldmarker is not None:atomic(marker,oldmarker,0o644)
         else:marker.unlink(missing_ok=True)
-        start()
+        start(oldwatch)
     else:program.unlink(missing_ok=True);marker.unlink(missing_ok=True)
     raise
 '''
@@ -106,12 +115,14 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sensor',default='ubuntu-endpoint');parser.add_argument('--username',default='soctest',help='Existing non-root account; never creates or modifies users')
     parser.add_argument('--config',type=Path,default=Path(__file__).with_name('live-config.json'))
+    parser.add_argument('--watch-artifacts',action='store_true',help='Enable bounded inotify file and script-path observations')
     a=parser.parse_args();container_name(a.sensor)
     if not re.fullmatch('[a-z_][a-z0-9_-]{0,31}',a.username):parser.error('Invalid account name')
     load_config(a.config);old=a.config.read_bytes();data=candidate_config(json.loads(old.decode('utf-8-sig')),a.sensor)
     with tempfile.TemporaryDirectory() as folder:
         check=Path(folder)/'config.json';check.write_text(json.dumps(data));load_config(check)
-    payload={'username':a.username,'code':base64.b64encode(Path(__file__).with_name('process_observer.py').read_bytes()).decode()}
+    payload={'username':a.username,'code':base64.b64encode(Path(__file__).with_name('process_observer.py').read_bytes()).decode(),
+        'artifact_code':base64.b64encode(Path(__file__).with_name('artifact_observer.py').read_bytes()).decode(),'watch_artifacts':a.watch_artifacts}
     result=subprocess.run(['docker','exec','-i','--user','0',a.sensor,'python3','-c',INSTALL],input=json.dumps(payload).encode(),capture_output=True,timeout=60)
     print(result.stdout.decode(errors='replace'),end='')
     if result.returncode:raise RuntimeError(result.stderr.decode(errors='replace')[-4000:])

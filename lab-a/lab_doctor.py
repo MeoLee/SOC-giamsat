@@ -65,7 +65,7 @@ def diagnose(config_path, model=None, runtime=False, bridge=False, runner=None):
             if source['kind']=='process':
                 check('process_observer:'+source['container'],lambda source=source:
                     json.loads(docker(['exec','--user','0',source['container'],'python3','-c',
-                        "import sys,json; sys.path.insert(0,'/usr/local/lib/soc-lab'); import process_observer; print(json.dumps(process_observer.check_health()))"])))
+                        "import sys,json; sys.path.insert(0,'/usr/local/lib/soc-lab'); import process_observer; print(json.dumps(process_observer.check_health(require_artifacts="+repr(bool(config.get('correlation',{}).get('artifact_observation_enabled')))+")))"])))
         for sensor in sorted({s['container'] for s in config['sources'] if s['kind'] == 'eve'}):
             check('suricata_process:' + sensor, lambda sensor=sensor:
                   docker(['exec', sensor, 'pgrep', '-f', r'^([^[:space:]]*/)?suricata([[:space:]]|$)']))

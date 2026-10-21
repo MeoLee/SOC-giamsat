@@ -224,6 +224,8 @@ def case_for(burst, scans, success=None, config=None):
 
 def build_cases(events, config):
     events=list({e['event_id']:e for e in events}.values())
+    from artifact_chain import attribute_artifacts
+    events=attribute_artifacts(events,config)
     from lab_recon import scan_evidence
     scans = scan_evidence(events,config)
     groups = defaultdict(list)
@@ -277,11 +279,15 @@ def build_cases(events, config):
             cluster.append(e)
         if cluster:
             add_scan_case(cases, key, cluster)
+    from ssh_chain_context import extend_auth_context
+    extend_auth_context(cases,events,config)
     from lab_endpoint import extend_cases
     extend_cases(cases, events, config)
     from lab_file_chain import transfer_cases
     for case in transfer_cases(events):
         cases[case['case_id']] = case
+    from artifact_chain import extend_artifact_cases
+    extend_artifact_cases(cases,events,config)
     from lab_process_chain import extend_process_cases
     extend_process_cases(cases,events,config)
     from lab_risk import case_assessment

@@ -7,9 +7,12 @@ POLICY = 'soc-operational-risk/0.1'
 
 # ATT&CK candidates from observed evidence, not inferred decrypted SSH content.
 STAGE_LABELS = {
+    'observed_script_file':('Script file observed after SSH (transport unverified)',None),
+    'observed_script_execution':('Interpreter invoked observed script','T1059.004'),
+    'observed_cron_change':('Cron file change observed (persistence unconfirmed)',None),
     'ssh_service_contact':('SSH service contact (recon unproven)',None),
     'observed_ssh_session':('Native SSH session observed',None),
-    'observed_reverse_shell':('Shell with outgoing TCP socket and exact SSH session','T1059.004'),
+    'observed_reverse_shell':('Shell with verified outgoing TCP socket','T1059.004'),
     'syn_connection_pressure': ('TCP SYN connection pressure (impact unproven)', None),
     'observed_eicar_transfer': ('Verified EICAR test-file transfer (SSH lab receiver)', 'T1105'),
     'observed_auth_failures': ('Authentication failures (context)', None),
@@ -39,7 +42,7 @@ def case_assessment(case):
     stages = case['stages']; names = [s['name'] for s in stages]
     base = {'possible_recon':40, 'possible_password_guessing':65,
              'suspicious_login_sequence':85, 'possible_web_sqli':60,
-             'observed_eicar_transfer':40,'observed_reverse_shell':85}[case['status']]
+             'observed_eicar_transfer':40,'observed_reverse_shell':95,'observed_ssh_activity':15,'observed_artifact_activity':30}[case['status']]
     bonus = 10 if 'possible_recon' in names and len(names) > 1 else 0
     score = min(95, base+bonus)
     nodes = []
@@ -55,6 +58,8 @@ def case_assessment(case):
              for a,b in zip(nodes,nodes[1:])]
     priority = assessment(score, 'Observed evidence stages: '+' -> '.join(names),
                           'correlated_hypothesis')
+    if any(s['name']=='observed_reverse_shell' and s.get('reverse_shell_behavior_verified',s.get('native_ssh_session_verified',False)) and s.get('outgoing_syn_verified') for s in stages):
+        priority.update(risk_level='critical',risk_score=95,risk_policy='soc-operational-risk/0.5')
     labels = [STAGE_LABELS[name][0] for name in names]
     techniques = list(dict.fromkeys(STAGE_LABELS[name][1] for name in names
                                     if STAGE_LABELS[name][1]))

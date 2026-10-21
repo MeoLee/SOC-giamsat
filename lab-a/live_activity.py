@@ -204,6 +204,7 @@ class Activities:
         self.publish_http_load(engine)
         self.publish_syn_load(engine)
         self.publish_process_evidence(engine)
+        self.publish_artifact_evidence(engine)
         for case in engine.cases:
             # Publish on stage/status transitions, not once per failed password.
             stages = [s['name'] for s in case['stages']]
@@ -269,7 +270,7 @@ class Activities:
                 evidence_ids=s['evidence_ids'][:4],evidence_count=len(s['evidence_ids']),evidence_file=str(engine.snapshot),training_label=None)
             self.emit(row);self.ssh_contact_published.add(c['case_id'])
             print('[SSH-CONTACT]',safe(c['source_ip']),'->',safe(c['target_ip']),'TCP/22',
-                'da_quan_sat_SYN; muc_dich_chua_xac_dinh; khong_doi_completed_flow',flush=True)
+                'SYN_observed; intent_unknown; no_completed_flow_wait',flush=True)
 
     def publish_process_evidence(self,engine):
         from lab_correlation import digest
@@ -281,14 +282,26 @@ class Activities:
                 revision=digest(s)
                 if self.process_revisions.get(c['case_id'])==revision:continue
                 row=make_event('reverse_shell_evidence',[self.folder.name,c['case_id'],revision],
-                    **assessment(85,'Kernel shell FDs, exact native SSH session and outgoing SYN; authorization unknown','observed_shell_socket'),
+                    **{**assessment(95,'Kernel shell FDs and matching outgoing SYN; SSH attribution reported separately; authorization unknown','observed_shell_socket'),'risk_level':'critical'},
                     source_ip=c['source_ip'],target_ip=c['target_ip'],target_host=c['target_host'],username=c['username'],
                     session_id=self.folder.name,event_time=s['end_time'],
                     **{k:s[k] for k in ('pid','process_id','executable','effective_uid','source_port','peer_ip','peer_port',
-                        'local_ip','local_port','stdin_stdout_same_socket','native_ssh_session_verified','outgoing_syn_verified','kernel_process_observation')},
+                        'local_ip','local_port','stdin_stdout_same_socket','native_ssh_session_verified','outgoing_syn_verified','kernel_process_observation','reverse_shell_behavior_verified','ssh_session_link_method') if k in s},
                     evidence_ids=s['evidence_ids'][:4],evidence_count=len(s['evidence_ids']),evidence_file=str(engine.snapshot),training_label=None)
                 self.emit(row);self.process_revisions[c['case_id']]=revision
                 print('[PROCESS-EVIDENCE]',safe(c['target_host']),'shell_socket_outbound_verified', 'pid='+str(s['pid']),flush=True)
+
+    def publish_artifact_evidence(self,engine):
+        if not getattr(engine,'config',{}).get('artifact_observation_enabled'):return
+        if not hasattr(self,'artifact_published'):self.artifact_published=set()
+        for e in engine.events.values():
+            if e['kind'] not in ('file.artifact_closed','process.script_execution','file.cron_changed') or e['event_id'] in self.artifact_published:continue
+            fields={k:e[k] for k in ('artifact_action','artifact_path','artifact_sha256','artifact_bytes','target_host','target_ip','source_ip','username','kernel_process_observation','kernel_file_observation','pid','executable','referenced_paths') if k in e}
+            self.emit(make_event('artifact_observation',[self.folder.name,e['event_id']],**fields,
+                session_id=self.folder.name,event_time=e['event_time'],file_transport_verified=False,maliciousness_verified=False,
+                evidence_ids=[e['event_id']],evidence_file=str(engine.snapshot)))
+            self.artifact_published.add(e['event_id'])
+            print('[ARTIFACT]',safe(e['target_host']),safe(e['artifact_action']),safe(e['artifact_path']),'transport_unverified; maliciousness_unknown',flush=True)
 
     def publish_syn_load(self,engine):
         from syn_load_detection import syn_cases
@@ -336,7 +349,7 @@ class Activities:
                 'requests='+str(s['request_count']),'window='+str(s['window_seconds'])+'s',
                 'p95_us='+str(s['burst_p95_us']),'5xx='+str(s['server_5xx_count']),
                 'baseline='+str(s['healthy_baseline_observed']),
-                'nghi_van_DoS_co_suy_giam' if degraded else 'ap_luc_HTTP_chua_chung_minh_DoS',flush=True)
+                'possible_HTTP_DoS_with_degradation' if degraded else 'HTTP_pressure_impact_unproven',flush=True)
 
     def publish_chains(self, engine):
         from lab_campaign import wire_events,validate
@@ -390,7 +403,7 @@ class Activities:
         rows = []
         for g in self.groups.values():
             self.sequence += 1
-            interpretation=('Chưa xác định loại tấn công (lớp điểm cao nhất: BENIGN)' if g['predicted_label']=='BENIGN' else 'Ứng viên '+g['predicted_label']+' (chưa xác minh)') if g['decision']=='possible_attack' else 'Chưa đạt ngưỡng cảnh báo hoặc ngoài phạm vi mô hình'
+            interpretation=('Attack type undetermined (highest-scoring class: BENIGN)' if g['predicted_label']=='BENIGN' else 'Candidate '+g['predicted_label']+' (unverified)') if g['decision']=='possible_attack' else 'Below alert threshold or outside model scope'
             row = make_event('model_summary', [self.folder.name, 'summary', self.sequence], **g,
                 model_interpretation=interpretation,top_class_is_benign=g['predicted_label']=='BENIGN',
                 model_decision_method='sum_non_benign_scores_threshold',

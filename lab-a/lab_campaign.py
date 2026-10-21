@@ -8,18 +8,18 @@ from copy import deepcopy
 from datetime import timedelta
 
 DEFAULTS = {'attack_chain_enabled': False, 'chain_max_seconds': 900,
-            'ssh_contact_observations_enabled':False,'http_load_alerts_enabled':False,'syn_load_alerts_enabled':False,
+            'ssh_extended_chains_enabled':False,'artifact_observation_enabled':False,'ssh_contact_observations_enabled':False,'http_load_alerts_enabled':False,'syn_load_alerts_enabled':False,
             'http_pressure_threshold': 60, 'http_pressure_window_seconds': 10,
             'http_slow_us': 1000000, 'http_baseline_minimum': 10,
             'http_baseline_maximum':20,'http_latency_multiplier':5,'http_pressure_gap_us':500000,
             'chain_idle_seconds':90,'chain_rescan_gap_seconds':30}
-CATEGORIES = {'ssh_service_contact':'authentication_observation','observed_ssh_session':'authentication_observation','observed_reverse_shell':'execution','syn_connection_pressure':'availability_pressure','observed_auth_failures':'authentication_observation','possible_recon': 'reconnaissance',
+CATEGORIES = {'observed_script_file':'file_observation','observed_script_execution':'execution','observed_cron_change':'persistence_observation','ssh_service_contact':'authentication_observation','observed_ssh_session':'authentication_observation','observed_reverse_shell':'execution','syn_connection_pressure':'availability_pressure','observed_auth_failures':'authentication_observation','possible_recon': 'reconnaissance',
     'observed_eicar_transfer':'test_file_transfer',
     'repeated_auth_failures': 'credential_access', 'auth_success_after_failures': 'credential_access',
     'observed_shell_execution': 'execution', 'observed_file_transfer': 'transfer',
     'possible_web_sqli': 'web_exploitation_attempt',
     'http_request_pressure': 'availability_pressure', 'possible_http_dos': 'availability_degradation'}
-BASE = {'ssh_service_contact':0,'observed_ssh_session':0,'observed_reverse_shell':85,'syn_connection_pressure':50,'observed_auth_failures':15,'possible_recon': 40, 'repeated_auth_failures': 65, 'auth_success_after_failures': 85,
+BASE = {'observed_script_file':30,'observed_script_execution':60,'observed_cron_change':60,'ssh_service_contact':0,'observed_ssh_session':0,'observed_reverse_shell':95,'syn_connection_pressure':50,'observed_auth_failures':15,'possible_recon': 40, 'repeated_auth_failures': 65, 'auth_success_after_failures': 85,
         'observed_eicar_transfer':40,
         'observed_shell_execution': 85, 'observed_file_transfer': 85,
         'possible_web_sqli': 60, 'http_request_pressure': 45, 'possible_http_dos': 75}
@@ -27,7 +27,7 @@ BASE = {'ssh_service_contact':0,'observed_ssh_session':0,'observed_reverse_shell
 
 def validate(config):
     result = {**DEFAULTS, **config}
-    for name in ('attack_chain_enabled','ssh_contact_observations_enabled','http_load_alerts_enabled','syn_load_alerts_enabled'):
+    for name in ('attack_chain_enabled','ssh_extended_chains_enabled','artifact_observation_enabled','ssh_contact_observations_enabled','http_load_alerts_enabled','syn_load_alerts_enabled'):
         if type(result[name]) is not bool:
             raise ValueError(name+' must be boolean')
     for key, low, high in [('chain_max_seconds',60,3600),('http_pressure_threshold',10,10000),
@@ -157,7 +157,7 @@ def _build_episode_chains(events, branches, config):
         # Execution and transfer strengthen the same auth branch, not three
         # independent attack families. Diversity bonus is capped at five.
         families={('credential_access' if x in ('execution','transfer') else
-                   'availability' if x.startswith('availability_') else x) for x in cats if x not in ('reconnaissance','authentication_observation')}
+                   'availability' if x.startswith('availability_') else x) for x in cats if x not in ('reconnaissance','authentication_observation','file_observation')}
         base=max(BASE[s['name']] for s in stages)
         recon=10 if root_id and families else 0; diversity=5 if len(families)>1 else 0
         users=sorted({s['username'] for s in stages if s.get('username')})
@@ -170,7 +170,10 @@ def _build_episode_chains(events, branches, config):
             schema_version='soc-attack-chain/0.2', association='same_source_target_time_hypothesis',
             explanation='Branches share source, exact target IP/host and a bounded time window. '
                         'Auth remains per-account/session. Cross-branch causality and compromise are unproven.')
-        r['risk_level']='high' if r['risk_score']>=70 else 'medium' if r['risk_score']>=40 else 'low'
+        verified=any(s['name']=='observed_reverse_shell' and s.get('reverse_shell_behavior_verified',s.get('native_ssh_session_verified',False)) and s.get('outgoing_syn_verified') and s.get('stdin_stdout_same_socket') for s in stages)
+        r['reverse_shell_behavior_verified']=bool(verified)
+        r['risk_level']='critical' if verified else 'high' if r['risk_score']>=70 else 'medium' if r['risk_score']>=40 else 'low'
+        if verified:r.update(risk_score=95,risk_score_base=95,risk_policy='soc-operational-risk/0.5')
         r.pop('proofs',None)
         output.append(r)
     return sorted(output,key=lambda r:(r['first_seen'],r['chain_id']))
@@ -189,7 +192,7 @@ def stage_detail(stage):
                 'fim_alert_id','vt_alert_id','vt_rule_id','vt_positives','vt_report_time',
                 'pid','process_id','executable','real_uid','effective_uid','session_uid','sshd_pids',
                 'peer_ip','peer_port','local_ip','local_port','native_ssh_session_verified','outgoing_syn_verified',
-                'callback_process_count','connection_count','reconnaissance_proven','telemetry_trust'):
+                'reverse_shell_behavior_verified','ssh_session_link_method','artifact_association','file_transport_verified','artifact_observation_count','referenced_paths','callback_process_count','connection_count','reconnaissance_proven','telemetry_trust'):
         if key in s: line+='; '+key+'='+str(s[key])
     return line
 
@@ -218,7 +221,9 @@ def wire_events(chain, session_id, evidence_file, runtime=None):
             fields.update({k:s[k] for k in ('pid','process_id','executable','real_uid','effective_uid','session_uid',
                 'source_port','sshd_pids','peer_ip','peer_port','local_ip','local_port','socket_inode',
                 'stdin_stdout_same_socket','native_ssh_session_verified','outgoing_syn_verified','kernel_process_observation',
-                'callback_process_count','telemetry_trust')})
+                'callback_process_count','telemetry_trust','reverse_shell_behavior_verified','ssh_session_link_method') if k in s})
+        if s['name'] in ('observed_script_file','observed_script_execution','observed_cron_change'):
+            fields.update({k:s[k] for k in ('artifact_path','artifact_sha256','artifact_bytes','artifact_owner','artifact_association','file_transport_verified','artifact_observation_verified','referenced_paths','executable','pid','process_id') if k in s})
         if s['name']=='ssh_service_contact':
             fields.update({k:s[k] for k in ('target_port','connection_count','reconnaissance_proven','detection_method','limitation')})
         if s['name']=='syn_connection_pressure':
@@ -244,7 +249,7 @@ def wire_events(chain, session_id, evidence_file, runtime=None):
         'chain_evidence_count':len(eids),'chain_password_failure_count':sum(s.get('failure_count',0) for s in stages),
         'activity':c['explanation'],'association':c['association'],
         'isolation_method':c.get('isolation_method','legacy_window'),'episode_boundary':c.get('episode_boundary',''),
-        'actor_intent_proven':False, 'risk_is_probability':False,
+        'actor_intent_proven':False, 'risk_is_probability':False,'reverse_shell_behavior_verified':c.get('reverse_shell_behavior_verified',False),
         'attack_chain_is_causal_proof':False,'confirmed_compromise':False,'techniques_are_hypotheses':True,
         'techniques':';'.join(dict.fromkeys(STAGE_LABELS[n][1] for n in names if STAGE_LABELS[n][1])) or 'unmapped',
         'endpoint_evidence_scope':'controlled_lab_probe_only' if any(n in ('observed_shell_execution','observed_file_transfer','observed_eicar_transfer') for n in names) else 'no_endpoint_probe',

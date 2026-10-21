@@ -21,7 +21,7 @@ class ProcessChainTests(unittest.TestCase):
  def test_four_steps_same_branch_deterministic(self):
   cs=chains(rows());self.assertEqual(len(cs),1);c=cs[0]
   self.assertEqual([s['name'] for s in c['stages']],['possible_recon','repeated_auth_failures','auth_success_after_failures','observed_reverse_shell'])
-  self.assertEqual(c['stages'][-1]['parent_stage_ids'],[c['stages'][-2]['stage_id']]);self.assertEqual(c['risk_level'],'high');self.assertFalse(c['confirmed_compromise'])
+  self.assertEqual(c['stages'][-1]['parent_stage_ids'],[c['stages'][-2]['stage_id']]);self.assertEqual(c['risk_level'],'critical');self.assertFalse(c['confirmed_compromise'])
   self.assertEqual(chains(list(reversed(rows()))),chains(rows()+rows()))
   docs=wire_events(c,'session','cases.json');self.assertTrue(docs[-2]['outgoing_syn_verified']);self.assertLess(max(len(json.dumps(d).encode()) for d in docs),6000)
  def test_no_process_or_syn_never_reverse(self):
@@ -34,7 +34,7 @@ class ProcessChainTests(unittest.TestCase):
  def test_normal_login_never_callback(self):self.assertEqual(chains([accepted()]),[])
  def test_single_port_is_context_no_recon_or_bruteforce(self):
   contact=dict(kind='network.tcp_syn',event_time=time_at(0),event_id='contact',signature_id='9900003',sensor_id='ubuntu-endpoint',source_ip='172.20.0.4',target_ip='172.20.0.3',target_host='ubuntu-endpoint',source_port=49000,destination_port=22,flow_id='900')
-  c=chains([contact,accepted(),callback(),event(raw())])[0];self.assertEqual([s['name'] for s in c['stages']],['ssh_service_contact','observed_ssh_session','observed_reverse_shell']);self.assertEqual(c['risk_score'],85);self.assertFalse(c['recon_observed'])
+  c=chains([contact,accepted(),callback(),event(raw())])[0];self.assertEqual([s['name'] for s in c['stages']],['ssh_service_contact','observed_ssh_session','observed_reverse_shell']);self.assertEqual(c['risk_score'],95);self.assertFalse(c['recon_observed'])
  def test_below_threshold_stays_context(self):
   c=chains([event(auth(10),'auth.log'),accepted(),callback(),event(raw())])[0];self.assertEqual(c['stages'][0]['name'],'observed_auth_failures')
  def test_invalid_evidence_rejected(self):
