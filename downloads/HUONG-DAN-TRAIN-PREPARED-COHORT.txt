@@ -1,0 +1,349 @@
+﻿TRAINING DASHBOARD — HƯỚNG DẪN TRAIN, PREPARED VÀ COHORT
+=====================================================
+Ngày tổng hợp: 22/10/2026 (UTC+07:00)
+Phạm vi: chạy trực tiếp trên máy Windows hiện tại của bạn.
+
+1. PHÂN BIỆT CÁC THÀNH PHẦN
+---------------------------
+- Training Dashboard: giao diện huấn luyện tại http://127.0.0.1:8765.
+- Backend: Python chạy lệnh "-m soc_ai dashboard".
+- Frontend: soc_ai\web\dashboard.html.
+- Cohort JSONL: dữ liệu đầu vào đúng schema của bước prepare.
+- Prepared: bộ dữ liệu đã được xử lý, trích xuất đặc trưng/chia tập,
+  có report và các file dữ liệu mà backend yêu cầu.
+- Run: kết quả một lượt training, gồm model, metadata, metrics, history,
+  biểu đồ và checkpoint nếu có.
+- Wazuh Dashboard/Attack Chain: giao diện theo dõi sự kiện lab, KHÁC
+  Training Dashboard. Không cần bật Docker/Wazuh/AI live để train từ
+  bộ prepared đã có đầy đủ trên máy.
+
+Không double-click dashboard.html để thay cho mở backend.
+HTML mở bằng file:// không có API training và có thể báo mất kết nối.
+Chỉ có mã nguồn và model đã xuất thì chưa đủ để train lại:
+phải có dữ liệu cohort hoặc prepared tương ứng.
+
+2. ĐƯỜNG DẪN ĐANG SỬ DỤNG TRÊN MÁY BẠN
+--------------------------------------
+Nguồn backend/frontend:
+E:\SOC-Lab\AI\SOC-AI-v0.4-research
+
+HTML giao diện:
+E:\SOC-Lab\AI\SOC-AI-v0.4-research\soc_ai\web\dashboard.html
+
+Prepared của run Quality cuối:
+E:\SOC-Lab\AI\quality-data\20261019T152751Z-0e65ae\prepared
+
+Model/run cuối đã lưu:
+E:\SOC-Lab\AI\runs\mlp04-quality-20261019-232507
+
+Python ứng viên:
+E:\SOC-Lab\AI\.venv-ai04-cuda\Scripts\python.exe
+E:\SOC-Lab\AI\.venv-ai04-cpu\Scripts\python.exe
+
+Prepared Quality trên là bộ ghép dữ liệu gốc CICIDS và dữ liệu local.
+Không mô tả nó là CICIDS thuần.
+Không ghi run demo mới đè vào thư mục model cuối đã lưu.
+
+3. LỆNH MỞ DASHBOARD ĐỂ DEMO TRAIN
+--------------------------------
+Mở PowerShell, dán toàn bộ khối dưới đây. Không dán prompt PS> hoặc >>.
+Khối này kiểm tra môi trường trước khi dùng, tạo thư mục demo riêng,
+chọn prepared cũ và cấu hình một run mới.
+
+$ErrorActionPreference = 'Stop'
+
+$project = 'E:\SOC-Lab\AI\SOC-AI-v0.4-research'
+$prepared = 'E:\SOC-Lab\AI\quality-data\20261019T152751Z-0e65ae\prepared'
+
+if (-not (Test-Path "$project\soc_ai\web\dashboard.html")) {
+    throw 'Khong tim thay giao dien training.'
+}
+if (-not (Test-Path "$prepared\report.json")) {
+    throw 'Khong tim thay prepared cua run cuoi.'
+}
+
+$candidates = @(
+    'E:\SOC-Lab\AI\.venv-ai04-cuda\Scripts\python.exe',
+    'E:\SOC-Lab\AI\.venv-ai04-cpu\Scripts\python.exe'
+)
+
+$py = $null
+$device = $null
+
+foreach ($candidate in $candidates) {
+    if (-not (Test-Path $candidate)) { continue }
+    Write-Host "Kiem tra: $candidate"
+
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $result = & $candidate -c "import torch, numpy, sklearn, matplotlib; print('cuda' if torch.cuda.is_available() else 'cpu')" 2>$null
+        $checkCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousPreference
+    }
+
+    if ($checkCode -eq 0) {
+        $py = $candidate
+        $device = "$($result | Select-Object -Last 1)".Trim()
+        break
+    }
+    Write-Host 'Moi truong thieu dependency; thu moi truong tiep theo.'
+}
+
+if (-not $py) {
+    throw 'Chua co moi truong du dependency. Dung tai day de cai vao dung Python.'
+}
+
+$demoRoot = Join-Path 'E:\SOC-Lab\AI' ('training-demo-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+New-Item -ItemType Directory -Path $demoRoot -Force | Out-Null
+
+$settings = @{
+    cohort              = ''
+    prepared            = $prepared
+    run                 = ''
+    epochs              = 30
+    batch_size          = 2048
+    device              = $device
+    checkpoint_seconds  = 30
+    patience            = 7
+    local_loss_fraction = 0.20
+    skip_baseline       = $true
+}
+
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText(
+    "$demoRoot\dashboard-session.json",
+    ($settings | ConvertTo-Json),
+    $utf8
+)
+
+Write-Host "PYTHON: $py" -ForegroundColor Green
+Write-Host "DEVICE: $device" -ForegroundColor Green
+Write-Host "DEMO ROOT: $demoRoot"
+
+Set-Location $project
+& $py -m soc_ai dashboard --root $demoRoot --port 8765
+
+----- HẾT KHỐI POWERSHELL -----
+
+Giữ terminal mở. Mở trình duyệt:
+http://127.0.0.1:8765
+
+Có thể mở URL bằng terminal PowerShell khác:
+Start-Process 'http://127.0.0.1:8765'
+
+Không chạy khối trên nhiều lần khi backend cũ vẫn chiếm cổng8765.
+Nếu cổng bận, dùng backend đang chạy hoặc đổi --port 8766,
+rồi mở http://127.0.0.1:8766.
+Nếu vừa thay HTML, nhấn Ctrl+F5.
+
+Khối này chỉ mở giao diện; chưa tự bấm training.
+Kiểm tra report.json tồn tại chưa chứng minh toàn bộ prepared hợp lệ;
+backend còn phải kiểm tra dữ liệu/contract khi chạy.
+
+4. LỆNH MỞ NGẮN KHI ĐÃ BIẾT PYTHON NÀO HOẠT ĐỘNG
+------------------------------------------------
+Ví dụ nếu môi trường CPU đã đủ dependency:
+
+Set-Location 'E:\SOC-Lab\AI\SOC-AI-v0.4-research'
+$py = 'E:\SOC-Lab\AI\.venv-ai04-cpu\Scripts\python.exe'
+& $py -m soc_ai dashboard --root 'E:\SOC-Lab\AI' --port 8765
+
+Lệnh này sử dụng root gốc và có thể nạp lại dashboard-session.json cũ.
+Nó không tự áp cấu hình Quality/demo mới như khối ở mục3.
+Kiểm tra lại đường dẫn và các ô trước khi train.
+
+Tên thư mục .venv-ai04-cuda không chứng minh đã cài torch hoặc dùng được GPU.
+Phải kiểm tra import và torch.cuda.is_available(). Nếu CPU-only, chọn cpu.
+Nếu cả hai môi trường lỗi, không train tiếp và không cài package vào một
+Python ngẫu nhiên khác. Ghi đúng interpreter và lỗi trước khi cài dependency.
+
+5. Ô COHORT CÓ PHẢI ĐIỀN KHÔNG?
+-------------------------------
+TRƯỜNG HỢP A — DÙNG PREPARED QUALITY ĐÃ CÓ
+- Cohort: ĐỂ TRỐNG.
+- Prepared: chọn quality-data\20261019T152751Z-0e65ae\prepared.
+- Không bấm "Chuẩn bị dữ liệu".
+- Khi dữ liệu sẵn sàng, cấu hình run và bấm "Bắt đầu train".
+
+TRƯỜNG HỢP B — DÙNG PREPARED CICIDS THUẦN ĐÃ CÓ
+- Cohort: ĐỂ TRỐNG.
+- Prepared: chọn đúng bộ CICIDS thuần.
+- Local loss fraction: 0.
+- Không bấm prepare lại vào thư mục đã tồn tại.
+- Không dùng prepared Quality rồi chỉ đổi local fraction về0 để tuyên bố
+  dữ liệu trở thành CICIDS thuần: dữ liệu local vẫn có trong bộ đó.
+
+TRƯỜNG HỢP C — CHUẨN BỊ MỚI TỪ COHORT
+- Cohort: nhập đường dẫn FILE cohort JSONL đúng schema project.
+- Prepared: nhập đường dẫn thư mục đầu ra MỚI, chưa tồn tại.
+- Bấm "1 · Chuẩn bị dữ liệu" và đợi hoàn tất.
+- Sau đó chọn cấu hình và bấm "2 · Bắt đầu train".
+
+TRƯỜNG HỢP D — CHỈ CÓ CICIDS CSV HOẶC PCAP GỐC
+- Chưa nhập trực tiếp vào ô cohort được.
+- Cần bước chuyển đổi/chuẩn hóa thành cohort JSONL đúng schema mà project
+  hỗ trợ; không phải chỉ đổi đuôi CSV/PCAP thành .jsonl.
+- Giữ nguyên ý nghĩa đặc trưng và nhãn; không tự điền trường thiếu bằng0.
+- Khi đã có cohort hợp lệ thì thực hiện trường hợpC.
+
+KHÔNG nhập model.json, metrics.json, report.json, history.jsonl,
+file trọng số hoặc thư mục dataset vào ô "File dữ liệu cohort (JSONL)".
+
+Nút Prepare của UI dùng luồng cohort tiêu chuẩn. Nó không tự ghép mọi
+folder log local thành bộ Quality. Bộ Quality phải được chuẩn bị đúng
+pipeline/script và khai báo session train/validation/test của project.
+
+6. PREPARED CẦN GIỮ NHỮNG GÌ?
+-----------------------------
+- Giữ TOÀN BỘ folder prepared, gồm report và dữ liệu liên quan.
+- Không chỉ chép report.json hoặc tạo file report giả để bật nút train.
+- Không ghép report của bộ này với mảng dữ liệu của bộ khác.
+- File model cuối không thay thế được dataset prepared.
+- Dữ liệu phải đọc được từ máy chạy backend.
+- Backend có thể từ chối bộ sai feature hash/schema/integrity.
+- Nếu chuyển sang máy khác, sửa đường dẫn cấu hình; đường dẫn Windows cũ
+  không tự tồn tại trên máy mới.
+
+Ô form không phải cơ chế upload dữ liệu từ trình duyệt.
+Nếu chỉ sửa đường dẫn bằng tay mà trạng thái chưa cập nhật, không bấm
+Prepare vào bộ đã có để ép nạp. Có thể dùng cách tạo dashboard-session.json
+trước khi khởi động backend như mục3; hoặc chọn run gần đây đã dùng đúng
+prepared rồi bấm Run mới để giữ cấu hình và bỏ đường dẫn run cũ.
+
+7. CẤU HÌNH DEMO THAM CHIẾU RUN CUỐI
+------------------------------------
+Epochs:                     30
+Batch size:                 2048
+Thiết bị:                   cuda nếu thực sự hỗ trợ, nếu không cpu
+Checkpoint interval:        30 giây
+Patience:                   7
+Local loss fraction:        0.20 cho bộ Quality tương ứng
+Baseline tuyến tính:        Bỏ qua
+Thư mục run:                Để trống hoặc thư mục mới chưa tồn tại
+
+Các ô mặc định UI có thể là20 epochs, patience5, local fraction0.
+Không coi default trên form là thông số của run cuối.
+
+Local fraction0.20 là mục tiêu đóng góp weighted loss của miền local,
+KHÔNG phải20% số dòng và KHÔNG phải tỷ lệ chia train/test.
+Chỉ dùng khi bộ dữ liệu/cơ chế training hỗ trợ đúng cấu hình đó.
+
+Run cuối cũ dùng CUDA/RTX4050; run demo bằng CPU vẫn có thể train nhưng
+thời gian và kết quả có thể khác. Không cam kết đúng lại trọng số/metric
+chỉ vì nhập cùng hyperparameter.
+
+8. THAO TÁC TRAIN VÀ QUAY DEMO
+------------------------------
+1) Chạy mục3, mở URL8765, kiểm tra giao diện Training Dashboard.
+2) Chờ giao diện xác nhận prepared sẵn sàng.
+3) Với demo đã có prepared: cohort để trống, không bấm Prepare.
+4) Run để trống; kiểm tra đủ các ô theo mục7.
+5) Bắt đầu quay màn hình, chụp cấu hình.
+6) Bấm "2 · Bắt đầu train" một lần.
+7) Quan sát Epoch, Batch, Train loss, Validation macro F1 và checkpoint.
+8) Sau epoch hoàn tất, quay biểu đồ loss và F1.
+9) Có thể mở Nhật ký xử lý để xem backend.
+10) Chờ đánh giá/export hoàn tất, không dừng ngay sau epoch cuối.
+11) Chụp Báo cáo test và biểu đồ báo cáo.
+12) Bấm "Kiểm tra mô hình đã xuất" và ghi kết quả verify.
+
+Nút "Run mới" xóa ô đường dẫn run, không tự reset tất cả hyperparameter.
+Không train mới vào folder đã tồn tại. Nếu muốn nối tiếp run cũ, dùng resume.
+
+Dữ liệu demo do mục3 tạo nằm dưới:
+E:\SOC-Lab\AI\training-demo-<thời gian>\runs\...
+
+9. ĐỌC KẾT QUẢ ĐÚNG
+--------------------
+- Train loss: giá trị loss, không phải trực tiếp tỷ lệ dự đoán sai.
+- Validation macro F1: xem trên các epoch đã hoàn tất; số cuối trên UI
+  không nhất thiết là chỉ số của best epoch được chọn.
+- Training loss giảm không tự chứng minh model tốt hơn trên dữ liệu mới.
+- Đọc per-class precision, recall, F1 và support, không chỉ số tổng.
+- Support0 không cung cấp bằng chứng phát hiện lớp đó.
+- Binary attack precision/recall và benign false positive rate giúp đánh giá
+  cảnh báo/bỏ sót; có thể khác kết luận của nhãn argmax từng lớp.
+- Threshold và best epoch phải chọn theo policy validation; không chỉnh theo
+  test rồi coi test đó là đánh giá độc lập.
+- Với Quality, xem selection_policy và các thành phần trong model.json;
+  không suy ra selection chỉ dùng macro F1 trên đồ thị.
+- Chia tập nội bộ không tự bảo đảm độc lập theo chiến dịch/thời gian.
+- Tên hiển thị DoS có thể tương ứng lớp nội bộ DDoS của dataset;
+  đổi nhãn giao diện không thay bản chất dữ liệu hoặc phạm vi kiểm chứng.
+
+Các ảnh nên giữ: cấu hình; tiến độ/checkpoint; loss/F1; báo cáo test;
+kết quả verify. Dùng kết quả thật của run demo, không gán số run cũ cho run mới.
+
+10. KIỂM TRA MODEL ĐÃ XUẤT
+--------------------------
+Qua UI: chọn đúng run hoàn tất, bấm "Kiểm tra mô hình đã xuất".
+
+Qua CLI (thay $run bằng run demo thực tế):
+
+Set-Location 'E:\SOC-Lab\AI\SOC-AI-v0.4-research'
+$py = 'E:\SOC-Lab\AI\.venv-ai04-cpu\Scripts\python.exe'
+$run = 'DUONG_DAN_RUN_DEMO_THUC_TE'
+& $py -m soc_ai predict --model $run --verify-only --device cpu
+
+Kỳ vọng: chương trình thành công và có MODEL_VERIFY_OK.
+Verify kiểm tra bundle/golden-vector nhất quán, KHÔNG phải đo accuracy
+phát hiện tấn công trên lab thực tế.
+
+Giữ cả folder run: model-weights.npz, model.json, preprocessor.json,
+features.json, golden files, metrics, history, charts và requirements-lock.
+Giữ checkpoints nếu cần resume. Không trộn file của các run khác nhau.
+
+11. TẠM DỪNG, RESUME VÀ TẮT
+---------------------------
+Nếu train chưa xong:
+- Bấm "Tạm dừng và lưu".
+- Đợi xác nhận checkpoint và trạng thái đã tạm dừng.
+- Sau đó mới đóng backend/tắt máy.
+
+Resume:
+- Mở lại backend với cùng root của phiên demo.
+- Chọn đúng run và bấm "Tiếp tục từ checkpoint".
+- Cần checkpoint hợp lệ và dữ liệu prepared đúng, không chỉ có NPZ.
+- Resume khôi phục cấu hình/trạng thái đã lưu; không mặc định dùng các
+  giá trị mới vừa gõ vào form.
+- Nếu chạy lại toàn bộ mục3 sẽ tạo ROOT DEMO MỚI; muốn resume phải dùng
+  root cũ bằng lệnh mở ngắn và chọn run đã tạm dừng.
+
+Đóng tab trình duyệt không dừng training.
+Sau khi train/export/verify hoàn tất, Ctrl+C tại terminal để dừng dashboard.
+
+12. XỬ LÝ LỖI NHANH
+--------------------
+ModuleNotFoundError: torch:
+  Đang dùng sai/môi trường thiếu package. Dùng khối kiểm tra mục3;
+  không chọn một .venv chỉ dựa trên tên thư mục.
+
+Mất kết nối:
+  Kiểm tra backend và URL/cổng; không mở HTML bằng file://.
+
+Nút train chưa bật:
+  Prepared chưa hoàn chỉnh, đường dẫn chưa nạp hoặc job khác đang chạy.
+  Kiểm tra report/data và console.
+
+Output folder already exists:
+  Run mới/thư mục mới cho train mới; resume cho run cũ.
+
+CUDA unavailable/out of memory:
+  Kiểm tra đúng interpreter; chọn CPU hoặc giảm batch ở run mới.
+  Không sửa checkpoint tùy tiện để ép resume khác cấu hình.
+
+Verify sai hash/feature:
+  Giữ nguyên bundle để điều tra; không sửa metadata cho qua kiểm tra.
+
+Chọn run cũ làm đổi đường dẫn/tham số:
+  Backend đang khôi phục metadata của run đó. Kiểm tra lại trước khi train mới.
+
+LƯU Ý CUỐI
+-----------
+Training Dashboard và AI live là hai quy trình riêng.
+Train demo không tự cập nhật model đang chạy live trong Compose.
+Muốn thay model live, chọn bundle hoàn chỉnh đã kiểm tra và cấu hình/nạp lại
+phiên suy luận một cách chủ động.
