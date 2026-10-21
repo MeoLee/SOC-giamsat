@@ -24,6 +24,14 @@ REQUIRED = {'soc_ai/web/dashboard.html', 'soc_ai/predict.py', 'soc_ai/train.py',
             'lab_campaign.py', 'bounded_http_load.py', 'chain_scenarios.py', 'chain_trace.py',
             'chain_unified.py', 'setup_attack_chains.py', 'manage_chain_dashboards.py',
             'test_lab_campaign.py', 'test_chain_unified.py',
+            'lab_chain_episode.py', 'chain_graph.py', 'manual_chain_review.py',
+            'Start-SOC-Monitor.ps1', 'Install-Kali-Tools.ps1', 'dvwa_cli.py',
+            'setup_scenario_fim.py', 'setup_scenario_rules.py', 'soc_scenario_rules.xml',
+            'scenario_readiness.py', 'scenario_artifact.py', 'test_chain_episodes.py',
+            'test_scenario_research.py', 'test_dvwa_cli.py',
+            'docs/SCENARIO-RESEARCH-049-VI.md', 'docs/scenarios-049/00-PREPARE-VI.md',
+            'docs/scenarios-049/01-SINGLE-ACTIONS-VI.md', 'docs/scenarios-049/02-ATTACK-CHAINS-VI.md',
+            'docs/scenarios-049/validation.json', 'docs/scenarios-049/graph-validation.png',
             'docs/ATTACK-CHAINS-048-VI.md', 'docs/validation-048.json', 'dashboards/soc-ai-attack-chain-unified.ndjson'}
 
 

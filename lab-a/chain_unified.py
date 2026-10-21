@@ -47,7 +47,7 @@ def reader():
     next_lookup['fields']=['key']
     data['nextRows'].update(source='stageRows',transform=[
         {'type':'project','fields':['d','key']},
-        {'type':'filter','expr':"toString(datum.d.is_terminal)=='true'"},next_lookup,
+        {'type':'filter','expr':"toString(datum.d.is_terminal)=='true' && length(data('selected'))==1 && toString(data('selected')[0].d.next_step_ready)=='true'"},next_lookup,
         {'type':'window','ops':['row_number'],'as':['nextNumber']},
         {'type':'formula','as':'order','expr':'2000+datum.nextNumber'},
         {'type':'formula','as':'heading','expr':"'HƯỚNG ĐIỀU TRA TIẾP — NHÁNH '+datum.d.branch_id+' — CHƯA QUAN SÁT'"},
@@ -134,19 +134,27 @@ def workspace():
         update=mark.get('encode',{}).get('update',{})
         if 'href' in update:
             update.pop('href');mark['name']='chainSelect'
+    for mark in v['marks']:
+        update=mark.get('encode',{}).get('update',{})
+        if mark.get('type')=='group':
+            update['y']={'signal':'graphHeight+445'}
+            update['height']={'signal':'max(100,height-graphHeight-445)'}
+        elif 'y' in update and 'value' in update['y']:
+            update['y']={'signal':'graphHeight+'+str(update['y']['value']+65)}
     v['marks']=table['marks']+v['marks']
     for mark in v['marks']:
         update=mark.get('encode',{}).get('update',{})
         for item in update.values():
             if isinstance(item,dict) and isinstance(item.get('signal'),str):
-                item['signal']=item['signal'].replace('height-40','height-380')
+                item['signal']=item['signal'].replace('height-40','height-graphHeight-445').replace('height-380','height-graphHeight-445')
     # The reader's scroll region starts below the chain list.
     for signal in v['signals']:
         if signal['name']=='scrollY':
-            for on in signal['on']:on['update']=on['update'].replace('height+40','height+380')
+            for on in signal['on']:on['update']=on['update'].replace('height+40','height+graphHeight+445')
     for data in v['data']:
-        if data['name']=='drawRows':data['transform'][0]['expr']='contentHeight>height-380'
-    return v
+        if data['name']=='drawRows':data['transform'][0]['expr']='contentHeight>height-graphHeight-445'
+    from chain_graph import add_graph
+    return add_graph(v)
 
 def objects():
     query={'query':{'language':'kuery','query':QUERY},'filter':[], 'indexRefName':'index'}
@@ -166,7 +174,7 @@ def objects():
         '[Quay lại tất cả chain và bật refresh](#/view/'+DASHBOARD_ID+'?_a='+quote("(filters:!(),query:(language:kuery,query:''))",safe='')+'&_g='+quote('(refreshInterval:(pause:!f,value:2000))',safe='')+')'+
         '\n\n**Điểm:** max điểm hành vi +10 nếu có recon trước +5 nếu có ≥2 nhóm hành vi độc lập; cap 95. Đây là ưu tiên điều tra, không phải xác suất. '
         'HTTP rate cao là pressure; nghi vấn DoS cần baseline tốt rồi mới có suy giảm 5xx/latency. Không ép mọi cuộc tấn công phải có scan đã quan sát. '
-        'Mỗi nhánh có parent stage IDs và bằng chứng; các nhánh cùng nguồn/đích/thời gian chưa chứng minh cùng ý đồ hay quan hệ nhân quả. '
+        'Bật monitor rồi thao tác trong Kali Bash. Sau 90 giây không có hành vi mới, chain tạm lắng và hiện gợi ý nét đứt; đây là runbook theo bằng chứng, chưa có xác suất dự đoán được kiểm định. Mỗi nhánh có parent stage IDs và bằng chứng; các nhánh cùng nguồn/đích/thời gian chưa chứng minh cùng ý đồ hay quan hệ nhân quả. '
         'Event thường tiếp tục xem ở Threat Hunting.'})
     detail=visual(READER_ID,'Attack Chain — danh sách, các nhánh và hồ sơ','vega',{'spec':encoded(workspace())})
     search={'type':'search','id':SEARCH_ID,'references':[{'name':'index','type':'index-pattern','id':INDEX_ID}],
@@ -179,7 +187,7 @@ def objects():
         panels.append({'panelIndex':str(i),'panelRefName':ref,'type':row['type'],'version':'2.19.3',
             'embeddableConfig':{},'gridData':{'x':0,'y':y,'w':48,'h':height,'i':str(i)}});y+=height
     dash={'type':'dashboard','id':DASHBOARD_ID,'references':refs,'attributes':{
-        'title':'SOC Lab A - Attack Chain','description':'Một nơi điều tra chain, nhánh, phân loại và điểm theo bằng chứng.',
+        'title':'SOC Lab A - Attack Chain','description':'Sơ đồ bước → bước, episode riêng và gợi ý điều tra sau khi tạm lắng.',
         'version':1,'panelsJSON':encoded(panels),'optionsJSON':'{"useMargins":true,"hidePanelTitles":false}',
         'timeRestore':True,'timeFrom':'now-24h','timeTo':'now','refreshInterval':{'pause':False,'value':2000},
         'kibanaSavedObjectMeta':{'searchSourceJSON':encoded({'query':{'language':'kuery','query':''},'filter':[]})}}}

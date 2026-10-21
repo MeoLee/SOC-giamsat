@@ -247,7 +247,8 @@ class Activities:
                 self.publisher.enqueue(row)
 
     def publish_chains(self, engine):
-        from lab_campaign import wire_events
+        from lab_campaign import wire_events,validate
+        from lab_chain_episode import lifecycle
         from lab_correlation import digest
         from wazuh_bridge import encoded
         if not hasattr(self, 'chain_revisions'):
@@ -256,9 +257,10 @@ class Activities:
             self.chain_branch_cases = {}
         present = {c['chain_id']:c for c in getattr(engine,'chains',[])}
         for chain in present.values():
-            revision=digest(chain)
+            runtime=lifecycle(chain,validate(getattr(engine,'config',{})),getattr(engine,'evaluated_at',None))
+            revision=digest([chain,runtime['chain_status']])
             if self.chain_revisions.get(chain['chain_id'])==revision: continue
-            docs=wire_events(chain,self.folder.name,engine.snapshot)
+            docs=wire_events(chain,self.folder.name,engine.snapshot,runtime)
             if any(len(encoded(d).encode('utf-8'))>6000 for d in docs):
                 raise RuntimeError('Chain document exceeds 6000 bytes; full local evidence preserved.')
             append(self.path, docs)

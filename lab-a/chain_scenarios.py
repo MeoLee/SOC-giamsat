@@ -3,7 +3,8 @@ import argparse,json,subprocess,time
 from pathlib import Path
 from soc_ai.common import write_json
 from wazuh_scenarios import lab_scope,validate_capture,scan_command,ssh_command,expected_password_rejection,now
-SCENARIOS={'chain-sqli':['possible_web_sqli'], 'chain-bruteforce':['repeated_auth_failures'],
+SCENARIOS={'http-pressure':['http_pressure_or_degradation'],
+           'chain-http-sqli':['http_pressure_or_degradation','possible_web_sqli'], 'chain-sqli':['possible_web_sqli'], 'chain-bruteforce':['repeated_auth_failures'],
            'chain-dos':['http_pressure_or_degradation'],
            'chain-mixed':['repeated_auth_failures','http_pressure_or_degradation','possible_web_sqli']}
 
@@ -24,8 +25,8 @@ def main():
     a.output.mkdir(parents=True,exist_ok=False);path=a.output/'operator.json'
     report={'schema_version':'soc-chain-scenario/0.2','scenario':a.scenario,'capture_session_id':capture['session_id'],
             'scope':scope,'username':a.username,'started_at':now(),'complete':False,'training_label':None,
-            'expected_rule_ids':['119213']+(['119214'] if a.scenario!='chain-dos' else []),
-            'expected_rule_id_groups':[['119212','119214']],'required_stages':['possible_recon',*SCENARIOS[a.scenario]],
+            'expected_rule_ids':['119213'],
+            'expected_rule_id_groups':[['119212','119214']],'required_stages':([] if a.scenario=='http-pressure' else ['possible_recon'])+SCENARIOS[a.scenario],
             'steps':[],'phase_errors':[]}
     def command(argv,wrong=False,input_bytes=None):
         started=now();r=subprocess.run(argv,input=input_bytes,capture_output=True,timeout=35)
@@ -39,7 +40,8 @@ def main():
     target=scope['target_ip'];client=scope['client']
     try:
         with (a.capture/'scenario-operation.json').open('x',encoding='utf-8') as f:json.dump({'scenario':a.scenario,'operator_file':str(path)},f)
-        scan=scan_command(client,target);scan[scan.index('-p')+1]='1-32,80,443';command(scan)
+        if a.scenario!='http-pressure':
+            scan=scan_command(client,target);scan[scan.index('-p')+1]='1-32,80,443';command(scan)
         if a.scenario in ('chain-bruteforce','chain-mixed'):
             try:
                 command(['docker','exec','ubuntu-endpoint','id',a.username])
@@ -54,14 +56,14 @@ def main():
             except (RuntimeError,ValueError,subprocess.SubprocessError) as e:
                 report['phase_errors'].append({'phase':'auth','error':str(e)})
                 print('AUTH_PHASE_INCOMPLETE; independent HTTP phases continue; no transport error counted as auth failure.')
-        if a.scenario in ('chain-dos','chain-mixed'):
+        if a.scenario in ('chain-dos','chain-mixed','http-pressure','chain-http-sqli'):
             for _ in range(20):
                 command(['docker','exec',client,'curl','--noproxy','*','--max-time','3','--silent','--show-error',
                     '--output','/dev/null','--fail','http://'+target+'/soc-lab-health']);time.sleep(1)
             script=Path(__file__).with_name('bounded_http_load.py').read_bytes()
             r=command(['docker','exec','-i',client,'python3','-',target],input_bytes=script)
             report['http_load']=json.loads(r.stdout)
-        if a.scenario in ('chain-sqli','chain-mixed'):
+        if a.scenario in ('chain-sqli','chain-mixed','chain-http-sqli'):
             command(['docker','exec',client,'curl','--noproxy','*','--max-time','5','--silent','--show-error',
                 '--output','/dev/null','--write-out','%{http_code}\n',
                 'http://'+target+'/dvwa/vulnerabilities/sqli/?id=1%27%20UNION%20SELECT%201%2C2--%20-&Submit=Submit'])

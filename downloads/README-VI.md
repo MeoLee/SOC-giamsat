@@ -1,5 +1,12 @@
 # Tải gói
 
+- **[0.4.9 — Kali Bash thủ công, sơ đồ chain và tách episode](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.9-Manual-Chain-20261021.zip)**
+- [Hướng dẫn đầy đủ, chia theo nhóm](https://github.com/MeoLee/SOC-giamsat/blob/main/lab-a/docs/SCENARIO-RESEARCH-049-VI.md)
+- [Full source 0.4.9](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.9-Research-20261021.zip)
+
+Các liên kết dưới đây là bản lịch sử; chỉ import dashboard unified trong bản đang dùng.
+
+
 - **[0.4.8 — Unified Attack Chains, nâng thẳng từ 0.4.6](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.8-Unified-Chains-20261020.zip)**
 - [Hướng dẫn cài, một dashboard và kịch bản](https://github.com/MeoLee/SOC-giamsat/blob/main/lab-a/docs/ATTACK-CHAINS-048-VI.md)
 

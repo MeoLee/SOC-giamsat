@@ -88,5 +88,9 @@ class CampaignTests(unittest.TestCase):
             operator={'complete':True,'capture_session_id':'test','required_stages':['possible_recon','repeated_auth_failures','http_pressure_or_degradation','possible_web_sqli']}
             result=verify(raw,operator);self.assertTrue(result['checks_passed'],result)
             self.assertFalse(result['manager_delivery_verified_by_this_check'])
+            from manual_chain_review import review
+            manual=review(raw)
+            self.assertTrue(manual['checks_passed'],manual)
+            self.assertFalse(manual['operator_intent_or_attack_success_verified'])
 
 if __name__=='__main__':unittest.main()

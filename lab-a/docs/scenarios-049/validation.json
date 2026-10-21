@@ -1,0 +1,106 @@
+{
+  "release": "0.4.9",
+  "date": "2026-10-21",
+  "unit_suite": {
+    "run": 412,
+    "failed": 0,
+    "skipped": 2,
+    "reason_skipped": "Windows filesystem integration requires Windows"
+  },
+  "native_dashboard": {
+    "isolated_fixture_validation": true,
+    "real_windows_lab_verified": false,
+    "first_import_count": 5,
+    "repeat_import_count": 5,
+    "graph_observed_nodes": 4,
+    "graph_parent_edges": 3,
+    "graph_separate_branches": 3,
+    "graph_hypothesis_nodes": 3,
+    "auto_refresh_root_context_mixed": {
+      "stage_counts": [
+        1,
+        2,
+        4
+      ],
+      "stable_chain_id": "CHAIN-7FEA7A26A000960F",
+      "score": 80,
+      "independent_branch_count": 3
+    },
+    "native_click_scope": {
+      "chain_id": "CHAIN-7FEA7A26A000960F",
+      "session_id": "UNIFIED-FINAL",
+      "same_dashboard": true
+    },
+    "revision_isolation_when_stages_delayed": true,
+    "return_clears_native_filters": true,
+    "latest_inactive_not_resurrected": true,
+    "responsive_finite_dimensions": {
+      "width": 942,
+      "height": 1712
+    },
+    "page_errors": [],
+    "native_query_responses_checked": 30,
+    "max_searched_shards": 6,
+    "failed_shards": 0
+  },
+  "native_graph_lifecycle": {
+    "active": {
+      "nodes": 4,
+      "edges": 3,
+      "future": 0,
+      "next": 0,
+      "score": "80",
+      "status": "active"
+    },
+    "quiescent": {
+      "nodes": 4,
+      "edges": 3,
+      "future": 3,
+      "next": 3,
+      "score": "80",
+      "status": "quiescent"
+    },
+    "hypotheses_do_not_change_evidence_or_score": true
+  },
+  "native_suricata": {
+    "version": "Suricata 8.0.3",
+    "mode": "network-none offline PCAP",
+    "packets": 472,
+    "normalized_evidence": 94,
+    "chains": [
+      {
+        "source": "198.51.100.10",
+        "stage_names": [
+          "possible_web_sqli"
+        ]
+      },
+      {
+        "source": "198.51.100.20",
+        "stage_names": [
+          "possible_recon"
+        ]
+      }
+    ],
+    "http_single_port_negative_controls_no_chain": true,
+    "user_live_sensor_verified": false
+  },
+  "native_wazuh": {
+    "version": "4.14.7",
+    "analysisd_config_test_exit": 0,
+    "syscheckd_candidate_config_test_exit": 0,
+    "legacy_logtest_all_14_bridge_leaf_rules": true,
+    "serialized_stage_and_high_chain_match": true,
+    "kernel_decoder_positive_119254": true,
+    "port_44440_and_wrong_prefix_negative": true,
+    "fim_decoder_file_field_verified_in_upstream_source": true,
+    "fim_live_alert_end_to_end_verified": false
+  },
+  "dvwa_helper": "Mocked protocol/proof tests only. Real user DVWA login/upload/query not exercised in this cloud environment.",
+  "scope": "Isolated native OpenSearch, Wazuh validation binaries and offline Suricata; not the user Windows lab.",
+  "limits": [
+    "No calibrated next-action prediction accuracy established.",
+    "No general process audit, arbitrary reverse-shell detection or full web-shell/escalation/persistence automatic chain claim.",
+    "No live firewall DROP test or user FIM delivery validation.",
+    "No VirusTotal/Active Response integration or real DoS performed."
+  ]
+}

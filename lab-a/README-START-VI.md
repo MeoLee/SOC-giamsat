@@ -1,9 +1,11 @@
 # Lab A 0.4 — bản nghiên cứu cải tiến
 
-**Bản hiện hành: 0.4.8.** Bắt đầu tại [hướng dẫn một dashboard Attack Chain,
-scan → brute force/HTTP pressure/SQLi và cách nâng trực tiếp](docs/ATTACK-CHAINS-048-VI.md).
-Không cần cài 0.4.7 trước, không train lại. Chỉ import dashboard mới nêu trong
-hướng dẫn này; các tài liệu bên dưới thuộc những bản trước.
+**Bản hiện hành: 0.4.9.** Bắt đầu tại [hướng dẫn chuẩn bị và các nhóm kịch bản](docs/SCENARIO-RESEARCH-049-VI.md).
+Bật monitor một lần, gõ từng lệnh ở Kali Bash, xem sơ đồ chain có mũi tên trong
+Wazuh; không nhập SESSION bên attacker. Nâng trực tiếp từ 0.4.6/0.4.8, không
+train lại. Chỉ import file unified dashboard theo hướng dẫn mới.
+
+Tài liệu trước: [0.4.8 multi-branch chains](docs/ATTACK-CHAINS-048-VI.md).
 
 Tài liệu giao diện 0.4.7 (bản trước): [Bấm Chain ID để mở Hồ sơ Chain trong Wazuh, nội dung tiếng Việt và giả thuyết bước tiếp theo](docs/CHAIN-PROFILE-VI.md). Import một file đầy đủ 9 objects; không cần train lại hoặc restart. Có [Chain Investigation, bằng chứng từng bước và kịch bản năm bước](docs/CHAIN-INVESTIGATION-VI.md), [bảng Attack Chain Detail và scoring trên Wazuh](docs/CHAIN-DASHBOARD-VI.md), [sửa SYN/recon và cài rule](docs/RECON-FIX-VI.md), [Wazuh realtime](docs/WAZUH-REALTIME-VI.md), cùng [train Quality bằng dashboard](docs/TRAIN-DASHBOARD-VI.md). Giữ model và venv hiện có. Dashboard chi tiết import riêng, giữ bảng 0.4.5; hai hành động endpoint cần cài probe có kiểm soát, không phải audit cho mọi lệnh. Không phải train lại.
 

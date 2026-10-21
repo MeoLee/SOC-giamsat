@@ -9,7 +9,8 @@ from datetime import timedelta
 
 DEFAULTS = {'attack_chain_enabled': False, 'chain_max_seconds': 900,
             'http_pressure_threshold': 60, 'http_pressure_window_seconds': 10,
-            'http_slow_us': 1000000, 'http_baseline_minimum': 10}
+            'http_slow_us': 1000000, 'http_baseline_minimum': 10,
+            'chain_idle_seconds':90,'chain_rescan_gap_seconds':30}
 CATEGORIES = {'observed_auth_failures':'authentication_observation','possible_recon': 'reconnaissance',
     'repeated_auth_failures': 'credential_access', 'auth_success_after_failures': 'credential_access',
     'observed_shell_execution': 'execution', 'observed_file_transfer': 'transfer',
@@ -26,7 +27,7 @@ def validate(config):
         raise ValueError('attack_chain_enabled must be boolean')
     for key, low, high in [('chain_max_seconds',60,3600),('http_pressure_threshold',10,10000),
                            ('http_pressure_window_seconds',1,60),('http_slow_us',1000,60000000),
-                           ('http_baseline_minimum',5,1000)]:
+                           ('http_baseline_minimum',5,1000),('chain_idle_seconds',30,1800),('chain_rescan_gap_seconds',10,600)]:
         if type(result[key]) is not int or not low <= result[key] <= high:
             raise ValueError('Invalid campaign setting: '+key)
     return result
@@ -42,7 +43,7 @@ def http_cases(events, config):
         key=(e['target_host'],e['target_ip'],e.get('destination_port'),e.get('http_origin'))
         identity=e.get('http_record_id')
         if not identity or not e.get('http_origin'): continue
-        groups[(*key,e['source_ip'])][identity]=e
+        if not e.get('_chain_baseline_only'):groups[(*key,e['source_ip'])][identity]=e
         services[key][identity]=e
     result=[]
     for key, unique in sorted(groups.items()):
@@ -81,6 +82,25 @@ def http_cases(events, config):
 
 
 def build_chains(events, branches, config):
+    from lab_chain_episode import episodes
+    from lab_correlation import build_cases
+    c=validate(config)
+    if not c['attack_chain_enabled']:return []
+    result=[]
+    for episode in episodes(events,c):
+        # Rebuild auth/SQLi inside the episode to prevent a legacy 600-second
+        # aggregation from gluing distinct operations across a fresh scan.
+        local=episode['events']
+        branch_events=[e for e in local if not e.get('_chain_baseline_only')]
+        for chain in _build_episode_chains(local,build_cases(branch_events,c),c):
+            chain['isolation_method']=episode['method']
+            chain['episode_boundary']=episode['boundary']
+            chain['actor_intent_proven']=False
+            result.append(chain)
+    return sorted(result,key=lambda r:(r['first_seen'],r['chain_id']))
+
+
+def _build_episode_chains(events, branches, config):
     from lab_correlation import instant, digest
     from lab_recon import scan_evidence, stage as recon_stage
     c=validate(config)
@@ -157,7 +177,10 @@ def build_chains(events, branches, config):
             s['stage_id']='ST-'+digest([chain_id,s['branch_id'],s['name']])[:24]
             parents=[previous[s['branch_id']]] if s['branch_id'] in previous else ([root_id] if root_id else [])
             s['parent_relation']='same_source_target_time_hypothesis' if parents and parents[0]==root_id else 'within_branch_observed_sequence'
-            s['parent_stage_ids']=parents;previous[s['branch_id']]=s['stage_id']
+            s['parent_stage_ids']=parents
+            parent=next((p for p in stages if parents and p.get('stage_id')==parents[0]),None)
+            s['stage_position']=parent['stage_position']+1 if parent else 0
+            previous[s['branch_id']]=s['stage_id']
             if s['name']=='possible_recon':root_id=s['stage_id']
         parents={p for s in stages for p in s['parent_stage_ids']}
         for s in stages:s['is_terminal']=s['stage_id'] not in parents
@@ -195,7 +218,7 @@ def stage_detail(stage):
     return line
 
 
-def wire_events(chain, session_id, evidence_file):
+def wire_events(chain, session_id, evidence_file, runtime=None):
     from lab_correlation import digest, instant
     from lab_risk import STAGE_LABELS
     from wazuh_bridge import make_event
@@ -207,7 +230,7 @@ def wire_events(chain, session_id, evidence_file):
         # Evidence reference arrays are samples; the case snapshot has every ID.
         fields={**common, 'stage_id':s['stage_id'],'branch_id':s['branch_id'], 'stage_name':s['name'],'stage_category':CATEGORIES[s['name']],
                 'username':s.get('username'),'parent_stage_ids':s['parent_stage_ids'],
-                'parent_relation':s['parent_relation'],'is_terminal':s['is_terminal'],
+                'parent_relation':s['parent_relation'],'stage_position':s['stage_position'],'is_terminal':s['is_terminal'],
                 'baseline_evidence_count':len(s.get('baseline_evidence_ids',[])),
                 'baseline_evidence_ids':s.get('baseline_evidence_ids',[])[:4],
                 'start_time':s['start_time'],'end_time':s['end_time'],'event_time':s['end_time'],
@@ -223,7 +246,9 @@ def wire_events(chain, session_id, evidence_file):
         'attack_chain_stage_count':len(stages),'branch_count':len(c['branches']),
         'chain_started_at':c['first_seen'],'chain_last_seen_at':c['last_seen'],'event_time':c['last_seen'],
         'chain_evidence_count':len(eids),'chain_password_failure_count':sum(s.get('failure_count',0) for s in stages),
-        'activity':c['explanation'],'association':c['association'], 'risk_is_probability':False,
+        'activity':c['explanation'],'association':c['association'],
+        'isolation_method':c.get('isolation_method','legacy_window'),'episode_boundary':c.get('episode_boundary',''),
+        'actor_intent_proven':False, 'risk_is_probability':False,
         'attack_chain_is_causal_proof':False,'confirmed_compromise':False,'techniques_are_hypotheses':True,
         'techniques':';'.join(dict.fromkeys(STAGE_LABELS[n][1] for n in names if STAGE_LABELS[n][1])) or 'unmapped',
         'endpoint_evidence_scope':'controlled_lab_probe_only' if any(n in ('observed_shell_execution','observed_file_transfer') for n in names) else 'no_endpoint_probe',
@@ -232,6 +257,8 @@ def wire_events(chain, session_id, evidence_file):
     summary=make_event('attack_chain',[session_id,c['chain_id'],digest(c)],**fields)
     # The revision list can grow without bound on large cases. Keep an explicit
     # count/digest instead: raw stage docs + local snapshot are authoritative.
+    summary.update(runtime or {'chain_status':'unknown','next_step_ready':False,'chain_end_proven':False})
+    summary['event_id']=digest([summary['event_id'],summary['chain_status']])
     summary.update(stage_revision_digest=digest([d['event_id'] for d in docs]),
                    stage_revision_count=len(docs))
     return docs+[summary]

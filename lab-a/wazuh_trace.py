@@ -173,7 +173,7 @@ def recon_coverage(capture,operator):
     path=capture/'correlation-events.jsonl'
     scenario=operator['scenario']
     minimum={'normal-http':12,'single-port':24,'port-scan':32,'chain':32,'chain-extended':32,
-             'chain-sqli':34,'chain-bruteforce':34,'chain-dos':34,'chain-mixed':34,
+             'chain-sqli':34,'chain-bruteforce':34,'chain-dos':34,'chain-mixed':34,'chain-http-sqli':34,
              'normal-ssh':5,'ssh-negative':2,'ssh-burst':8,'ssh-success':1,'web-sqli':1}.get(scenario)
     if scenario=='http-burst':minimum=operator.get('http_requests')
     events={};event_ids=set();invalid=0
