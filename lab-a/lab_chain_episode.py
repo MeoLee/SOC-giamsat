@@ -13,6 +13,8 @@ def episodes(events,config):
     events=with_callback_proofs(events)
     scans=scan_evidence(events,config)
     proof_ids={i for s in scans for i in s['recon_evidence_ids']}
+    from ssh_contact_detection import contact_cases
+    proof_ids.update(i for c in contact_cases(events,config) for s in c['stages'] for i in s['evidence_ids'])
     from syn_load_detection import syn_cases
     http_ids={i for b in http_cases(events,config)+syn_cases(events,config) for s in b['stages'] for i in s['evidence_ids']}
     grouped=defaultdict(list);scan_groups=defaultdict(list)

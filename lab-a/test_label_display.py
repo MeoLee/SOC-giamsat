@@ -15,7 +15,7 @@ class DisplayTests(unittest.TestCase):
    with contextlib.redirect_stdout(out):a.prediction(flow(),p);a.flush(force=True)
    row=json.loads(a.path.read_text().splitlines()[-1])
    self.assertEqual(row['predicted_label'],'DoS');self.assertEqual(row['model_predicted_label'],'DDoS')
-   self.assertEqual(p['predicted_label'],'DDoS');self.assertIn('prediction=DoS',out.getvalue());self.assertNotIn('prediction=DDoS',out.getvalue())
+   self.assertEqual(p['predicted_label'],'DDoS');self.assertIn('top_class=DoS',out.getvalue());self.assertNotIn('top_class=DDoS',out.getvalue())
  def test_generated_dashboard_no_distributed_description(self):
   from chain_unified import objects
   from chain_profile import STEPS,FOLLOW_UP

@@ -233,11 +233,14 @@ class LiveCollector(Collector):
 
     def poll(self):
         more = super().poll()
-        for source_file, container in self.eve_sources:
-            more = self.observer.consume(source_file, container) or more
         if self.correlator:
+            evidence_count_before=len(self.correlator.events)
             more = self.correlator.consume() or more
             self.activities.correlation(self.correlator)
+            if len(self.correlator.events)!=evidence_count_before and self.publisher:
+                self.publisher.flush()
+        for source_file, container in self.eve_sources:
+            more = self.observer.consume(source_file, container) or more
         if self.context:
             more = self.context.consume() or more
         self.activities.flush()

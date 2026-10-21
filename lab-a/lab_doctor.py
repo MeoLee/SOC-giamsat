@@ -80,6 +80,8 @@ def diagnose(config_path, model=None, runtime=False, bridge=False, runner=None):
                     raise ValueError('Unsupported bridge installation')
                 if config['correlation'].get('attack_chain_enabled') and not {119212,119213,119214} <= set(ready.get('rule_ids',[])):
                     raise ValueError('Install the 0.4.8 bridge rules before starting chain Live: python setup_wazuh.py --manager '+config['wazuh_manager'])
+                if config['correlation'].get('ssh_contact_observations_enabled') and 119221 not in ready.get('rule_ids',[]):
+                    raise ValueError('Install SSH contact rule119221 using setup_wazuh.py')
                 if any(s['kind']=='process' for s in config['sources']) and 119220 not in ready.get('rule_ids',[]):
                     raise ValueError('Install process evidence rule 119220 with setup_wazuh.py before Live')
                 if config['correlation'].get('syn_load_alerts_enabled') and 119219 not in set(ready.get('rule_ids',[])):

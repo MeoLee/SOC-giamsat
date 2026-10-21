@@ -117,7 +117,7 @@ class RealtimeTests(unittest.TestCase):
         for rule in rules:
             if rule.attrib['id'] in ('119207','119208','119210'):
                 self.assertEqual(rule.attrib['level'],'3')
-        self.assertEqual(set(map(int,ids)),set(range(119200,119216))|{119217,119218,119219,119220})
+        self.assertEqual(set(map(int,ids)),set(range(119200,119216))|{119217,119218,119219,119220,119221})
 
     def test_public_target_and_wrong_network_rejected_before_traffic(self):
         with patch('subprocess.run') as runner:

@@ -1,0 +1,147 @@
+{
+  "version": "0.4.14.1",
+  "test_suite": {
+    "run": 511,
+    "failed": 0,
+    "errors": 0,
+    "windows_only_skips": 2
+  },
+  "native_wazuh": {
+    "native_wazuh": "4.14.7",
+    "matched_rules_and_levels": [
+      [
+        "119201",
+        "3"
+      ],
+      [
+        "119202",
+        "5"
+      ],
+      [
+        "119203",
+        "8"
+      ],
+      [
+        "119204",
+        "10"
+      ],
+      [
+        "119205",
+        "13"
+      ],
+      [
+        "119206",
+        "12"
+      ],
+      [
+        "119207",
+        "3"
+      ],
+      [
+        "119208",
+        "3"
+      ],
+      [
+        "119209",
+        "8"
+      ],
+      [
+        "119210",
+        "3"
+      ],
+      [
+        "119211",
+        "7"
+      ],
+      [
+        "119212",
+        "5"
+      ],
+      [
+        "119213",
+        "3"
+      ],
+      [
+        "119214",
+        "12"
+      ],
+      [
+        "119215",
+        "12"
+      ],
+      [
+        "119217",
+        "8"
+      ],
+      [
+        "119218",
+        "12"
+      ],
+      [
+        "119219",
+        "8"
+      ],
+      [
+        "119220",
+        "12"
+      ],
+      [
+        "119221",
+        "3"
+      ],
+      [
+        "119221",
+        "3"
+      ],
+      [
+        "119202",
+        "5"
+      ],
+      [
+        "119200",
+        "0"
+      ]
+    ],
+    "neutral_ssh_contact_level3": true,
+    "missing_syn_proof_fails_closed": true,
+    "benign_argmax_binary_threshold_description_verified": true
+  },
+  "native_dashboard": {
+    "native_opensearch": "2.19.3",
+    "fixture_only": true,
+    "windows_lab_verified": false,
+    "first_import": 5,
+    "repeat_import": 5,
+    "pending_without_completed_flow": {
+      "nodes": 1,
+      "risk_score": 0,
+      "label": "Tiếp xúc SSH — ứng viên chưa xác minh"
+    },
+    "expires_without_new_log_after95s": true,
+    "promoted_same_chain_id": {
+      "nodes": 3,
+      "arrows": 2,
+      "active_chains": 1,
+      "recon_observed": false
+    },
+    "page_errors": [],
+    "failed_shards": []
+  },
+  "controls": [
+    "one SYN visible without completed flow",
+    "evidence published before inference",
+    "duplicate/retransmit does not reset idle",
+    "singleton hides after95s",
+    "normal authentication retracts contact",
+    "broad scan not duplicated",
+    "same Chain ID when auth stages arrive",
+    "BENIGN argmax and non-BENIGN sum explained separately",
+    "old auth cannot suppress a later reused source port"
+  ],
+  "limits": [
+    "No user Windows latency benchmark",
+    "No MLP accuracy improvement claimed",
+    "No attribution of one-port SYN to Nmap or malicious intent",
+    "Existing indexed alerts unchanged"
+  ]
+}

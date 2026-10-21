@@ -67,6 +67,7 @@ class Activities:
                 'destination_port_min': event.get('dest_port'), 'destination_port_max': event.get('dest_port'),
                 'score_max': None, 'source_file': event.get('_soc_source_file', 'suricata-eve.jsonl'),
                 'model_weights_sha256': prediction.get('model_weights_sha256', ''),
+                'attack_score_threshold':prediction.get('attack_score_threshold'),
                 'first_event_time': event.get('timestamp'), 'last_event_time': event.get('timestamp')}
         g = self.groups[key]
         g['sensor_tcp_gap_flow_count'] = g.get('sensor_tcp_gap_flow_count', 0) + int(
@@ -198,6 +199,7 @@ class Activities:
         append(self.path, rows)
         for (kind, host, src, user), count in groups.items():
             print('[AUTH]', safe(src), '->', safe(host), 'user='+safe(user), safe(kind), 'count='+str(count), flush=True)
+        self.publish_ssh_contacts(engine)
         self.publish_chains(engine)
         self.publish_http_load(engine)
         self.publish_syn_load(engine)
@@ -250,6 +252,24 @@ class Activities:
                 if len(encoded(row).encode('utf-8')) > 6000:
                     raise RuntimeError('Correlation event exceeds 6000 bytes; local case/evidence preserved. Shorten metadata before Wazuh delivery.')
                 self.publisher.enqueue(row)
+
+    def publish_ssh_contacts(self,engine):
+        from ssh_contact_detection import contact_cases
+        config=getattr(engine,'config',{})
+        if not config.get('attack_chain_enabled'):return
+        if not hasattr(self,'ssh_contact_published'):self.ssh_contact_published=set()
+        for c in contact_cases(list(engine.events.values()),config):
+            if c['case_id'] in self.ssh_contact_published:continue
+            s=c['stages'][0]
+            row=make_event('ssh_contact',[self.folder.name,c['case_id']],
+                **assessment(0,'Observed SSH SYN only; intent/scanner/attack unknown','neutral_service_contact'),
+                source_ip=c['source_ip'],target_ip=c['target_ip'],target_host=c['target_host'],target_port=22,
+                event_time=s['end_time'],ssh_syn_evidence_verified=True,connection_count=s['connection_count'],
+                reconnaissance_proven=False,waited_for_completed_flow=False,
+                evidence_ids=s['evidence_ids'][:4],evidence_count=len(s['evidence_ids']),evidence_file=str(engine.snapshot),training_label=None)
+            self.emit(row);self.ssh_contact_published.add(c['case_id'])
+            print('[SSH-CONTACT]',safe(c['source_ip']),'->',safe(c['target_ip']),'TCP/22',
+                'da_quan_sat_SYN; muc_dich_chua_xac_dinh; khong_doi_completed_flow',flush=True)
 
     def publish_process_evidence(self,engine):
         from lab_correlation import digest
@@ -370,7 +390,10 @@ class Activities:
         rows = []
         for g in self.groups.values():
             self.sequence += 1
+            interpretation=('Chưa xác định loại tấn công (lớp điểm cao nhất: BENIGN)' if g['predicted_label']=='BENIGN' else 'Ứng viên '+g['predicted_label']+' (chưa xác minh)') if g['decision']=='possible_attack' else 'Chưa đạt ngưỡng cảnh báo hoặc ngoài phạm vi mô hình'
             row = make_event('model_summary', [self.folder.name, 'summary', self.sequence], **g,
+                model_interpretation=interpretation,top_class_is_benign=g['predicted_label']=='BENIGN',
+                model_decision_method='sum_non_benign_scores_threshold',
                 activity='Flow model prediction; uncalibrated score, not verified attack',
                 softmax_scores_calibrated=False, evidence_file=str(self.folder/'ai-predictions.jsonl'))
             row.update(assessment(35 if g['decision']=='possible_attack' else 0,
@@ -378,10 +401,11 @@ class Activities:
                 'unverified_detection' if g['decision']=='possible_attack' else 'observation'),
                 session_id=self.folder.name)
             rows.append(row)
-            print('[AI]', safe(g['source_ip']), '->', safe(g['target_ip']),
+            print('[AI FLOW]', safe(g['source_ip']), '->', safe(g['target_ip']),
                   str(g['protocol'])+'/'+str(g['application']),
                   'ports='+str(g['destination_port_min'])+'..'+str(g['destination_port_max']),
-                  'flows='+str(g['flow_count']), 'prediction='+safe(g['predicted_label']),
+                  'flows='+str(g['flow_count']), 'top_class='+safe(g['predicted_label']),
+                  'interpretation='+safe(interpretation),
                   'decision='+safe(g['decision']), 'score_max='+str(g['score_max']), flush=True)
             if g['predicted_label']=='BENIGN' and g['decision']=='possible_attack':
                 print('[MODEL NOTE] BENIGN is the largest individual class, but the sum of other classes exceeds the alert threshold. This is not verified attack evidence.', flush=True)

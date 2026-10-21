@@ -12,8 +12,8 @@ READER_ID = 'soc-ai-chain-profile-reader-v1'
 # Display names, evidence requirements and follow-up hypotheses are curated.
 # ATT&CK does not prescribe a mandatory technique order or predict the future.
 STEPS = [
-    {'key':'ssh_service_contact','label':'Tiếp xúc dịch vụ SSH — chưa xác nhận Recon','technique':'unmapped',
-     'meaning':'SYN tới cổng 22 trước xác thực, không trùng source port của auth đã biết. Đây là ngữ cảnh; không xác định Nmap hay ý đồ xấu, không cộng điểm Recon.',
+    {'key':'ssh_service_contact','label':'Tiếp xúc SSH — ứng viên chưa xác minh','technique':'unmapped',
+     'meaning':'SYN tới cổng 22 chưa gắn với xác thực đã biết. Hiện ngay từ packet, không chờ completed flow hoặc hành vi tiếp theo. Có thể là SSH hợp lệ; chưa xác định Nmap hay ý đồ xấu và không cộng điểm Recon.',
      'requirement':'Đọc connection_count, thời gian, IP/port và bằng chứng. Một cổng không đạt điều kiện quét nhiều cổng.'},
     {'key':'observed_ssh_session','label':'Phiên SSH xác thực thành công','technique':'unmapped',
      'meaning':'Auth server ghi nhận Accepted và PID sshd. Đăng nhập thành công chưa chứng minh brute-force hay chiếm quyền.',

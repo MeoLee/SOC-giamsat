@@ -8,7 +8,7 @@ from copy import deepcopy
 from datetime import timedelta
 
 DEFAULTS = {'attack_chain_enabled': False, 'chain_max_seconds': 900,
-            'http_load_alerts_enabled':False,'syn_load_alerts_enabled':False,
+            'ssh_contact_observations_enabled':False,'http_load_alerts_enabled':False,'syn_load_alerts_enabled':False,
             'http_pressure_threshold': 60, 'http_pressure_window_seconds': 10,
             'http_slow_us': 1000000, 'http_baseline_minimum': 10,
             'http_baseline_maximum':20,'http_latency_multiplier':5,'http_pressure_gap_us':500000,
@@ -27,7 +27,7 @@ BASE = {'ssh_service_contact':0,'observed_ssh_session':0,'observed_reverse_shell
 
 def validate(config):
     result = {**DEFAULTS, **config}
-    for name in ('attack_chain_enabled','http_load_alerts_enabled','syn_load_alerts_enabled'):
+    for name in ('attack_chain_enabled','ssh_contact_observations_enabled','http_load_alerts_enabled','syn_load_alerts_enabled'):
         if type(result[name]) is not bool:
             raise ValueError(name+' must be boolean')
     for key, low, high in [('chain_max_seconds',60,3600),('http_pressure_threshold',10,10000),
@@ -105,6 +105,8 @@ def _build_episode_chains(events, branches, config):
                 'threshold':config['failure_threshold'],'window_seconds':config['failure_window_seconds']}]})
     from syn_load_detection import syn_cases
     all_branches+=http_cases(events,c)+syn_cases(events,c)
+    from ssh_contact_detection import attach_contacts
+    all_branches=attach_contacts(all_branches,events,c)
     for b in sorted(all_branches,key=lambda b:b['case_id']):
         parts=[deepcopy(s) for s in b['stages'] if s['name']!='possible_recon']
         start=min(instant(s['start_time']) for s in parts)
@@ -115,7 +117,7 @@ def _build_episode_chains(events, branches, config):
         # caused an action. Choose the latest proof, record other candidates.
         root=max(candidates,key=lambda r:(r['anchor_time'],r['case_id'])) if candidates else None
         if root is None:
-            cid='campaign:'+digest(['unobserved-recon',b['case_id']])
+            cid='campaign:'+digest(['ssh-contact-root',b['_contact_root_id']]) if b.get('_contact_root_id') else 'campaign:'+digest(['unobserved-recon',b['case_id']])
             root=roots.setdefault(cid,{'case_id':cid,'source_ip':b['source_ip'],'target_ip':b['target_ip'],
                 'target_host':b['target_host'],'anchor_time':parts[0]['start_time'],'stages':[], 'branches':[]})
         limit=instant(root['anchor_time'])+timedelta(seconds=c['chain_max_seconds'])
