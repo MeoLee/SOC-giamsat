@@ -34,6 +34,23 @@ class ExtendedTests(unittest.TestCase):
   for c in cs:
    for s in c['stages']:
     if s['name']=='observed_reverse_shell':self.assertFalse(s['native_ssh_session_verified'])
+ def test_ambiguous_sessions_share_one_account_episode_but_not_exact_session_claim(self):
+  a={**accepted(),'event_id':'second-auth','event_time':time_at(21),'source_port':40001,'sshd_pid':124}
+  detached=event(raw(ssh_context_method='unavailable',source_port=0,sshd_pids=[],sshd_process_ids=[],ancestry_pids=[],ancestry_process_ids=[]))
+  es=[event(auth(t),'auth.log') for t in (10,11,12)]+[accepted(),a,callback(),detached]
+  cs=chain(es);self.assertEqual(len(cs),1)
+  c=cs[0];self.assertEqual(c['risk_level'],'critical')
+  reverse=next(s for s in c['stages'] if s['name']=='observed_reverse_shell')
+  self.assertFalse(reverse['native_ssh_session_verified']);self.assertEqual(reverse['parent_relation'],'same_account_episode_hypothesis')
+  self.assertEqual(chain(es),chain(list(reversed(es))))
+ def test_no_join_across_idle_or_accounts(self):
+  from ssh_followup_context import join_followups
+  from copy import deepcopy
+  base=dict(source_ip='172.20.0.4',target_ip='172.20.0.3',target_host='ubuntu-endpoint',username='labuser',first_seen=time_at(20),last_seen=time_at(20),explanation='context')
+  context={**base,'status':'observed_ssh_activity','stages':[dict(name='observed_ssh_session',start_time=time_at(20),end_time=time_at(20),evidence_ids=[accepted()['event_id']])]}
+  for t,user in ((115,'labuser'),(25,'other')):
+   follow={**base,'status':'observed_reverse_shell','username':user,'first_seen':time_at(t),'last_seen':time_at(t),'stages':[dict(name='observed_reverse_shell',start_time=time_at(t),end_time=time_at(t),evidence_ids=['p'])]}
+   cases={'a':deepcopy(context),'p':follow};join_followups(cases,[accepted()],C);self.assertEqual(len(cases),2)
  def test_file_alone_never_actor_or_critical(self):self.assertEqual(chain([file_event()]),[])
  def test_different_user_or_idle_not_attributed(self):
   for f in (file_event(artifact_owner='other'),file_event(t=116)):

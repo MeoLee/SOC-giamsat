@@ -145,7 +145,7 @@ def _build_episode_chains(events, branches, config):
         for s in stages:
             s['stage_id']='ST-'+digest([chain_id,s['branch_id'],s['name']])[:24]
             parents=[previous[s['branch_id']]] if s['branch_id'] in previous else ([root_id] if root_id else [])
-            s['parent_relation']='same_source_target_time_hypothesis' if parents and parents[0]==root_id else 'within_branch_observed_sequence'
+            s['parent_relation']='same_account_episode_hypothesis' if s.get('account_episode_link_method') and parents else 'same_source_target_time_hypothesis' if parents and parents[0]==root_id else 'within_branch_observed_sequence'
             s['parent_stage_ids']=parents
             parent=next((p for p in stages if parents and p.get('stage_id')==parents[0]),None)
             s['stage_position']=parent['stage_position']+1 if parent else 0
@@ -192,7 +192,7 @@ def stage_detail(stage):
                 'fim_alert_id','vt_alert_id','vt_rule_id','vt_positives','vt_report_time',
                 'pid','process_id','executable','real_uid','effective_uid','session_uid','sshd_pids',
                 'peer_ip','peer_port','local_ip','local_port','native_ssh_session_verified','outgoing_syn_verified',
-                'reverse_shell_behavior_verified','ssh_session_link_method','artifact_association','file_transport_verified','artifact_observation_count','referenced_paths','callback_process_count','connection_count','reconnaissance_proven','telemetry_trust'):
+                'reverse_shell_behavior_verified','ssh_session_link_method','account_episode_link_method','artifact_association','file_transport_verified','artifact_observation_count','referenced_paths','callback_process_count','connection_count','reconnaissance_proven','telemetry_trust'):
         if key in s: line+='; '+key+'='+str(s[key])
     return line
 

@@ -290,6 +290,8 @@ def build_cases(events, config):
     extend_artifact_cases(cases,events,config)
     from lab_process_chain import extend_process_cases
     extend_process_cases(cases,events,config)
+    from ssh_followup_context import join_followups
+    join_followups(cases,events,config)
     from lab_risk import case_assessment
     for case in cases.values():
         case.update(case_assessment(case))

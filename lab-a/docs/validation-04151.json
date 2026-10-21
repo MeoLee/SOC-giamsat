@@ -1,0 +1,11 @@
+{
+  "version": "0.4.15.1",
+  "tests_run": 521,
+  "skipped_windows_only": 2,
+  "failures": 0,
+  "reproduced_ambiguous_ssh_sessions_single_account_episode": true,
+  "idle_95_seconds_and_other_account_not_joined": true,
+  "exact_ssh_attribution_not_fabricated": true,
+  "windows_user_session_verified": false,
+  "native_ui_and_wazuh_not_retested_for_this_correlation_only_fix": true
+}

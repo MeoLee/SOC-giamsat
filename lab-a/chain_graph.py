@@ -48,7 +48,7 @@ def add_graph(view):
     marks=[
         {'type':'path','from':{'data':'graphEdges'},'encode':{'update':{
             'path':{'field':'path'},'y':{'signal':'-graphScroll'},'stroke':{'value':'#3077a4'},'strokeWidth':{'value':2},
-            'tooltip':{'signal':"datum.d.parent_relation=='same_source_target_time_hypothesis' ? 'Cùng nguồn/đích/episode — liên quan theo thời gian, chưa chứng minh nhân quả' : 'Thứ tự đã quan sát trong cùng nhánh'"}}}},
+            'tooltip':{'signal':"datum.d.parent_relation=='same_account_episode_hypothesis' ? 'Cùng tài khoản, endpoint và episode — chưa xác minh đúng phiên SSH tạo tiến trình' : datum.d.parent_relation=='same_source_target_time_hypothesis' ? 'Cùng nguồn/đích/episode — liên quan theo thời gian, chưa chứng minh nhân quả' : 'Thứ tự đã quan sát trong cùng nhánh'"}}}},
         {'type':'symbol','from':{'data':'graphEdges'},'encode':{'update':{
             'x':{'field':'gx'},'y':{'signal':'datum.gy+38-graphScroll'},'shape':{'value':'triangle-right'},'size':{'value':70},'fill':{'value':'#3077a4'}}}},
         {'type':'rect','from':{'data':'graphNodes'},'encode':{'update':{
