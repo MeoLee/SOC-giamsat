@@ -35,6 +35,25 @@ def wait_manager_ready(timeout=30):
         time.sleep(min(2, max(0, deadline - time.monotonic())))
 
 
+def matched_rule_ids(output):
+    """Read selected rules only from Phase 3, never decoded JSON field names.
+
+    Legacy prints ``Rule id``; modern logtest prints ``id``. Searching for an
+    unanchored ``id:`` also matches signature_id, event_id and Phase 2's id.
+    """
+    phase=None
+    matched=[]
+    for line in output.splitlines():
+        header=re.match(r'\s*\*\*Phase\s+(\d+):',line)
+        if header:
+            phase=int(header.group(1))
+            continue
+        if phase==3:
+            rule=re.fullmatch(r"\s*(?:Rule\s+)?id:\s*'(\d+)'\s*",line)
+            if rule:matched.append(rule.group(1))
+    return matched
+
+
 class RuleCheck:
     def __init__(self, lines, expected_ids):
         self.lines = lines.encode() if isinstance(lines, str) else lines
@@ -43,7 +62,7 @@ class RuleCheck:
         self.validated = False
 
     def _match(self, output):
-        matched = re.findall(r"id:\s*'(\d+)'", output)
+        matched = matched_rule_ids(output)
         if matched != self.expected:
             raise RuntimeError('Rule fixture mismatch: expected ' + ','.join(self.expected)
                                + '; matched ' + ','.join(matched)

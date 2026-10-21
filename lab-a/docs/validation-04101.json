@@ -1,0 +1,26 @@
+{
+  "release": "0.4.10.1",
+  "date": "2026-10-21",
+  "cause": "Unanchored id regex matched signature_id from Phase 2",
+  "parse_only_phase_3": true,
+  "legacy_and_modern_output": true,
+  "uploaded_log_replayed_with_production_rulecheck_before_restart": {
+    "expected_rule_count": 15,
+    "matched_rule_count": 15,
+    "passed": true,
+    "personal_log_packaged": false
+  },
+  "native_4147_output_replay": {
+    "matched_rules": 22,
+    "passed": true,
+    "rules_rerun_for_this_parser_only_hotfix": false
+  },
+  "unit_suite": {
+    "run": 443,
+    "failed": 0,
+    "skipped": 2,
+    "skipped_reason": "Windows filesystem integration requires Windows"
+  },
+  "windows_live_install_verified": false,
+  "actual_virustotal_api_called": false
+}

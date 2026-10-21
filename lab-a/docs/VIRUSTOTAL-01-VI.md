@@ -1,5 +1,9 @@
 # VT-01 — File mới → FIM → VirusTotal hash report → High trên Wazuh
 
+**Bộ cài đã sửa ở 0.4.10.1.** Nếu đã chạy bản 0.4.10 và gặp matched thừa
+9900101, áp dụng [bản vá parser](WAZUH-LOGTEST-PARSER-FIX-04101-VI.md), rồi tiếp
+tục bước 2. Gói tải từ đầu bên dưới đã gồm bản sửa.
+
 Đây là **một kịch bản**, gồm đối chứng và EICAR. Không yêu cầu nhập SESSION,
 không chạy kịch bản khác cho tới khi bạn yêu cầu. EICAR là file kiểm thử vô
 hại, không chạy file và không dùng malware sống.
@@ -12,7 +16,7 @@ Ctrl+C monitor hiện tại, chờ LIVE_DONE. Trong **PowerShell Windows**:
 $ErrorActionPreference = 'Stop'
 $project = 'E:\SOC-Lab\AI\SOC-AI-v0.4-research'
 $zip = Join-Path $env:TEMP 'SOC-AI-Severity-VT-0410.zip'
-$url = 'https://raw.githubusercontent.com/MeoLee/SOC-giamsat/main/downloads/SOC-AI-Lab-A-v0.4.10-Severity-VT-20261021.zip'
+$url = 'https://raw.githubusercontent.com/MeoLee/SOC-giamsat/main/downloads/SOC-AI-Lab-A-v0.4.10.1-Severity-VT-20261021.zip'
 Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $zip
 Expand-Archive -LiteralPath $zip -DestinationPath $project -Force
 Set-Location $project

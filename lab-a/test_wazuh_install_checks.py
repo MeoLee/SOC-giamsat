@@ -14,7 +14,7 @@ import setup_wazuh
 import setup_scenario_rules
 
 READY = '\n'.join(name + ' is running...' for name in checks.CORE)
-MATCH = "Rule id: '119201'\n"
+MATCH = "**Phase 3: Completed filtering (rules).\n       Rule id: '119201'\n"
 
 
 class InstallationChecks(unittest.TestCase):
@@ -57,17 +57,48 @@ class InstallationChecks(unittest.TestCase):
     def test_rule_mismatch_is_not_retried_or_switched_to_modern(self):
         checker = checks.RuleCheck('fixture', [119201])
         with patch.object(checks.os, 'access', return_value=True), \
-                patch.object(checks, '_invoke', return_value=(0, "Rule id: '119202'")) as invoke:
+                patch.object(checks, '_invoke', return_value=(0, "**Phase 3: Completed filtering (rules).\n       Rule id: '119202'")) as invoke:
             with self.assertRaisesRegex(RuntimeError, 'fixture mismatch'):
                 checker.before_restart()
             self.assertEqual(invoke.call_count, 1)
 
     def test_modern_wrong_rule_fails_without_retry(self):
         checker = checks.RuleCheck('fixture', [119201]); checker.backend = 'modern-after-restart'
-        with patch.object(checks, '_invoke', side_effect=[(0, READY), (0, "Rule id: '119202'")]) as invoke:
+        with patch.object(checks, '_invoke', side_effect=[(0, READY), (0, "**Phase 3: Completed filtering (rules).\n       Rule id: '119202'")]) as invoke:
             with self.assertRaisesRegex(RuntimeError, 'fixture mismatch'):
                 checker.after_restart()
             self.assertEqual(invoke.call_count, 2)
+
+    def test_legacy_signature_id_and_decoded_id_are_not_rule_ids(self):
+        output=("**Phase 2: Completed decoding.\n"
+                "       signature_id: '9900101'\n"
+                "       event_id: '123456'\n"
+                "       id: '777'\n"
+                "**Phase 3: Completed filtering (rules).\n"
+                "       Rule id: '119215'\n"
+                "       Description: 'id: 9900101'\n")
+        self.assertEqual(checks.matched_rule_ids(output),['119215'])
+        checker=checks.RuleCheck('fixture',[119215]);checker._match(output)
+        self.assertTrue(checker.validated)
+
+    def test_modern_phase_three_id_and_crlf_are_supported(self):
+        output=("**Phase 2: Completed decoding.\r\n       id: '9900101'\r\n"
+                "**Phase 3: Completed filtering (rules).\r\n       id: '119215'\r\n"
+                "**Phase 1: Completed pre-decoding.\r\n"
+                "**Phase 2: Completed decoding.\r\n       rule_id: '888'\r\n"
+                "**Phase 3: Completed filtering (rules).\r\n       id: '87105'\r\n")
+        self.assertEqual(checks.matched_rule_ids(output),['119215','87105'])
+
+    def test_no_phase_three_cannot_fake_success_with_decoded_fields(self):
+        output="**Phase 2: Completed decoding.\n       id: '119201'\n       signature_id: '119201'\n"
+        self.assertEqual(checks.matched_rule_ids(output),[])
+        with self.assertRaisesRegex(RuntimeError,'fixture mismatch'):
+            checks.RuleCheck('fixture',[119201])._match(output)
+
+    def test_extra_real_phase_three_rule_is_not_silently_ignored(self):
+        output=MATCH+"**Phase 3: Completed filtering (rules).\n       Rule id: '119215'\n"
+        with self.assertRaisesRegex(RuntimeError,'fixture mismatch'):
+            checks.RuleCheck('fixture',[119201])._match(output)
 
     def test_stopped_analysisd_fails_readiness(self):
         status = READY.replace('wazuh-analysisd is running', 'wazuh-analysisd is not running')

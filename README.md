@@ -1,5 +1,8 @@
 # SOC-giamsat
 
+- **[0.4.10.1 — Severity/VT đã sửa parser logtest](https://raw.githubusercontent.com/MeoLee/SOC-giamsat/main/downloads/SOC-AI-Lab-A-v0.4.10.1-Severity-VT-20261021.zip)** (nâng từ 0.4.9.2).
+- [Máy đã có 0.4.10: chỉ vá lỗi matched thừa signature_id](lab-a/docs/WAZUH-LOGTEST-PARSER-FIX-04101-VI.md).
+
 - **[0.4.10 — Severity theo bằng chứng và VirusTotal opt-in](https://github.com/MeoLee/SOC-giamsat/raw/refs/heads/main/downloads/SOC-AI-Lab-A-v0.4.10-Severity-VT-20261021.zip)** (vá lên 0.4.9.2).
 - [Nghiên cứu severity Wazuh](lab-a/docs/SEVERITY-POLICY-0410-VI.md) · [Một bài VT-01 bằng EICAR](lab-a/docs/VIRUSTOTAL-01-VI.md).
 
