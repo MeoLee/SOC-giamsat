@@ -99,6 +99,23 @@ def flood_pcap():
     return bytes(result)
 
 
+def unique_alerts(alerts):
+    """EVE outputs may repeat the same packet/transaction alert across files.
+
+    Keep separate times, flows, tuples, transactions and signatures. This only
+    deduplicates validation output; it does not relax positive/negative rules.
+    """
+    seen=set();result=[]
+    for event in alerts:
+        alert=event.get('alert',{})
+        identity=json.dumps([event.get(k) for k in
+            ('timestamp','flow_id','src_ip','src_port','dest_ip','dest_port','proto','tx_id')]
+            +[alert.get(k) for k in ('gid','signature_id','rev','action')],sort_keys=True)
+        if identity not in seen:
+            seen.add(identity);result.append(event)
+    return result
+
+
 def remote_install(payload):
     if os.geteuid()!=0: raise RuntimeError('Run as root in the sensor container')
     processes=[]
@@ -126,6 +143,9 @@ def remote_install(payload):
             for line in path.read_text().splitlines():
                 event=json.loads(line)
                 if event.get('event_type')=='alert': alerts.append(event)
+        raw_count=len(alerts)
+        alerts=unique_alerts(alerts)
+        print('EVE_VALIDATION_COUNTS:',json.dumps({'raw_alerts':raw_count,'unique_alerts':len(alerts),'duplicate_alerts':raw_count-len(alerts)}),flush=True)
         actual={(str(e['alert']['signature_id']),e.get('src_port')) for e in alerts}
         if ('9900101',30001) not in actual or ('9900102',30002) not in actual:
             raise RuntimeError('SQLi positive PCAP test failed; live rule file was not changed')

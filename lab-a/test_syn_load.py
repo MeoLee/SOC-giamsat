@@ -11,6 +11,16 @@ def events(n=120,port=80,offset=0):
  return [dict(kind='network.tcp_syn',signature_id='9900003',sensor_id='sensor',source_ip='172.20.0.4',target_ip='172.20.0.3',target_host='ubuntu-endpoint',destination_port=port,source_port=10000+i,flow_id=str(i+1),event_id='e'+str(offset+i),event_time=(t+timedelta(seconds=offset+i*.02)).isoformat()) for i in range(n)]
 C=validate(dict(attack_chain_enabled=True,syn_load_alerts_enabled=True,recon_window_seconds=120,recon_port_threshold=20,recon_port_window_seconds=10,failure_threshold=5,failure_window_seconds=60))
 class SynTest(unittest.TestCase):
+ def test_eve_validation_duplicate_outputs(self):
+  from setup_suricata_web import unique_alerts
+  from copy import deepcopy
+  e=dict(timestamp='2026-10-14T19:20:02.596000-0400',flow_id=563707903473785,
+         src_ip='198.51.100.11',src_port=31059,dest_ip='192.0.2.10',dest_port=80,proto='TCP',
+         alert={'signature_id':9900104,'rev':1})
+  self.assertEqual(len(unique_alerts([e,deepcopy(e)])),1)
+  for changes in ({'src_ip':'198.51.100.12'},{'tx_id':2},{'timestamp':'2026-10-14T19:20:03.596000-0400'},
+                  {'flow_id':2},{'alert':{'signature_id':9900101,'rev':1}}):
+   self.assertEqual(len(unique_alerts([e,{**e,**changes}])),2)
  def test_threshold_disabled_and_scan(self):
   self.assertFalse(syn_cases(events(99),C));self.assertFalse(syn_cases(events(),{}))
   scan=events(32)
