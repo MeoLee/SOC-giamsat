@@ -12,11 +12,13 @@ DEFAULTS = {'attack_chain_enabled': False, 'chain_max_seconds': 900,
             'http_slow_us': 1000000, 'http_baseline_minimum': 10,
             'chain_idle_seconds':90,'chain_rescan_gap_seconds':30}
 CATEGORIES = {'observed_auth_failures':'authentication_observation','possible_recon': 'reconnaissance',
+    'observed_eicar_transfer':'test_file_transfer',
     'repeated_auth_failures': 'credential_access', 'auth_success_after_failures': 'credential_access',
     'observed_shell_execution': 'execution', 'observed_file_transfer': 'transfer',
     'possible_web_sqli': 'web_exploitation_attempt',
     'http_request_pressure': 'availability_pressure', 'possible_http_dos': 'availability_degradation'}
 BASE = {'observed_auth_failures':15,'possible_recon': 40, 'repeated_auth_failures': 65, 'auth_success_after_failures': 85,
+        'observed_eicar_transfer':40,
         'observed_shell_execution': 85, 'observed_file_transfer': 85,
         'possible_web_sqli': 60, 'http_request_pressure': 45, 'possible_http_dos': 75}
 
@@ -97,7 +99,8 @@ def build_chains(events, branches, config):
             chain['episode_boundary']=episode['boundary']
             chain['actor_intent_proven']=False
             result.append(chain)
-    return sorted(result,key=lambda r:(r['first_seen'],r['chain_id']))
+    from lab_file_chain import enrich
+    return enrich(sorted(result,key=lambda r:(r['first_seen'],r['chain_id'])), events)
 
 
 def _build_episode_chains(events, branches, config):
@@ -195,7 +198,7 @@ def _build_episode_chains(events, branches, config):
         r.update(chain_id=chain_id, stages=stages,categories=cats,accounts=users,
             username=users[0] if len(users)==1 else None,
             first_seen=min(s['start_time'] for s in stages),last_seen=max(s['end_time'] for s in stages),
-            risk_policy='soc-operational-risk/0.2',risk_score_base=base,risk_score_recon_bonus=recon,
+            risk_policy='soc-operational-risk/0.3',risk_score_base=base,risk_score_recon_bonus=recon,
             risk_score_diversity_bonus=diversity,risk_score_cap=95,risk_score=min(95,base+recon+diversity),
             recon_observed=bool(root_id),confirmed_compromise=False,training_label=None,
             schema_version='soc-attack-chain/0.2', association='same_source_target_time_hypothesis',
@@ -213,7 +216,9 @@ def stage_detail(stage):
     for key in ('distinct_destination_ports','port_threshold','port_window_seconds','failure_count',
                 'threshold','window_seconds','command','request_count','server_5xx_count','slow_request_count',
                 'baseline_request_count','healthy_baseline_observed','service_degradation_observed',
-                'artifact_bytes','transfer_url','artifact_sha256'):
+                'artifact_bytes','transfer_url','artifact_path','artifact_sha256','artifact_md5',
+                'transfer_method','source_port','test_artifact','executed','vt_status',
+                'fim_alert_id','vt_alert_id','vt_rule_id','vt_positives','vt_report_time'):
         if key in s: line+='; '+key+'='+str(s[key])
     return line
 
@@ -238,6 +243,10 @@ def wire_events(chain, session_id, evidence_file, runtime=None):
                 'evidence_count':len(s['evidence_ids']),'evidence_ids':s['evidence_ids'][:4],
                 'stage_details':stage_detail(s),'candidate_technique':STAGE_LABELS[s['name']][1] or 'unmapped',
                 'confirmed_compromise':False,'prediction_is_not_ground_truth':True}
+        if s['name']=='observed_eicar_transfer':
+            fields.update({k:s[k] for k in ('artifact_path','artifact_sha256','artifact_md5','artifact_bytes',
+                'test_artifact','executed','vt_status','fim_alert_id','vt_alert_id','vt_rule_id',
+                'vt_positives','vt_report_time','transfer_method','source_port') if k in s})
         docs.append(make_event('chain_stage',[session_id,s['stage_id'],revision],**fields))
     names=list(dict.fromkeys(s['name'] for s in stages))
     fields={**common,**{k:c[k] for k in ('risk_policy','risk_score','risk_level','risk_score_base',
@@ -252,7 +261,7 @@ def wire_events(chain, session_id, evidence_file, runtime=None):
         'actor_intent_proven':False, 'risk_is_probability':False,
         'attack_chain_is_causal_proof':False,'confirmed_compromise':False,'techniques_are_hypotheses':True,
         'techniques':';'.join(dict.fromkeys(STAGE_LABELS[n][1] for n in names if STAGE_LABELS[n][1])) or 'unmapped',
-        'endpoint_evidence_scope':'controlled_lab_probe_only' if any(n in ('observed_shell_execution','observed_file_transfer') for n in names) else 'no_endpoint_probe',
+        'endpoint_evidence_scope':'controlled_lab_probe_only' if any(n in ('observed_shell_execution','observed_file_transfer','observed_eicar_transfer') for n in names) else 'no_endpoint_probe',
         'chain_duration_seconds':round((instant(c['last_seen'])-instant(c['first_seen'])).total_seconds(),6)}
     # Stage documents are queued first; the summary points to their revision IDs.
     summary=make_event('attack_chain',[session_id,c['chain_id'],digest(c)],**fields)

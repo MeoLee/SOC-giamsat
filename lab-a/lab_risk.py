@@ -7,6 +7,7 @@ POLICY = 'soc-operational-risk/0.1'
 
 # ATT&CK candidates from observed evidence, not inferred decrypted SSH content.
 STAGE_LABELS = {
+    'observed_eicar_transfer': ('Verified EICAR test-file transfer (SSH lab receiver)', 'T1105'),
     'observed_auth_failures': ('Authentication failures (context)', None),
     'http_request_pressure': ('High HTTP request volume', None),
     'possible_http_dos': ('HTTP pressure with service degradation', 'T1499'),
@@ -33,7 +34,8 @@ def assessment(score, basis, outcome='unverified_detection'):
 def case_assessment(case):
     stages = case['stages']; names = [s['name'] for s in stages]
     base = {'possible_recon':40, 'possible_password_guessing':65,
-             'suspicious_login_sequence':85, 'possible_web_sqli':60}[case['status']]
+             'suspicious_login_sequence':85, 'possible_web_sqli':60,
+             'observed_eicar_transfer':40}[case['status']]
     bonus = 10 if 'possible_recon' in names and len(names) > 1 else 0
     score = min(95, base+bonus)
     nodes = []
@@ -78,6 +80,10 @@ def case_assessment(case):
             detail += ('; bytes='+str(stage['artifact_bytes'])
                        +'; URL='+stage['transfer_url']
                        +'; SHA256='+stage['artifact_sha256'])
+        elif stage['name'] == 'observed_eicar_transfer':
+            detail += ('; EICAR test file; path='+stage['artifact_path']
+                       +'; bytes='+str(stage['artifact_bytes'])
+                       +'; SHA256='+stage['artifact_sha256']+'; execution unproven')
         stage_details.append(detail)
     return {**priority,
             'chain_id': 'CHAIN-'+hashlib.sha256(case['case_id'].encode()).hexdigest()[:16].upper(),

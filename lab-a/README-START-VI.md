@@ -1,9 +1,12 @@
 # Lab A 0.4 — bản nghiên cứu cải tiến
 
-**Bản hiện hành: 0.4.9.** Bắt đầu tại [hướng dẫn chuẩn bị và các nhóm kịch bản](docs/SCENARIO-RESEARCH-049-VI.md).
+**Bản hiện hành: 0.4.11.** Nếu VT-01 đã đạt trên 0.4.10.2, dùng
+[bản vá Scan → EICAR → bằng chứng VT và dashboard Attack Chain](docs/EICAR-CHAIN-0411-VI.md).
+Không train lại, không nhập lại API key; import overwrite file unified5 objects.
+Cài mới bắt đầu tại [hướng dẫn chuẩn bị và các nhóm kịch bản](docs/SCENARIO-RESEARCH-049-VI.md),
+rồi [thiết lập VirusTotal](docs/VIRUSTOTAL-01-VI.md) trước bài chain EICAR.
 Bật monitor một lần, gõ từng lệnh ở Kali Bash, xem sơ đồ chain có mũi tên trong
-Wazuh; không nhập SESSION bên attacker. Nâng trực tiếp từ 0.4.6/0.4.8, không
-train lại. Chỉ import file unified dashboard theo hướng dẫn mới.
+Wazuh; không nhập SESSION bên attacker. Chỉ import file unified dashboard theo hướng dẫn mới.
 
 Tài liệu trước: [0.4.8 multi-branch chains](docs/ATTACK-CHAINS-048-VI.md).
 

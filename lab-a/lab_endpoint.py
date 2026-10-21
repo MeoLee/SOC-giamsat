@@ -16,7 +16,7 @@ def normalize(raw, config, source):
     event = json.loads(raw)
     if not isinstance(event, dict) or event.get('schema_version') != SCHEMA or event.get('lab_probe') is not True:
         raise ValueError('Explicit endpoint lab-probe schema required')
-    if event.get('kind') not in ('process.execution', 'file.transfer'):
+    if event.get('kind') not in ('process.execution', 'file.transfer', 'file.eicar_received'):
         raise ValueError('Unsupported endpoint action')
     if type(event.get('returncode')) is not int or event['returncode'] != 0:
         # Preserve failed raw actions, but they cannot create completed stages.
@@ -44,7 +44,21 @@ def normalize(raw, config, source):
     result.update(event_time=stamp(ended), started_at=stamp(started), source_ip=src,
         target_ip=dst, target_host=host, lab_probe=True,
         telemetry_trust='instrumented_lab_not_tamper_resistant')
-    if event['kind'] == 'process.execution':
+    if event['kind'] == 'file.eicar_received':
+        from lab_file_chain import PATH
+        from vt_lab_artifact import EICAR_SHA256, EICAR_MD5
+        path = event.get('artifact_path', '')
+        if (not PATH.fullmatch(path) or path != '/var/lib/soc-lab/fim/vt-eicar-'+token+'.txt'
+                or event.get('artifact_sha256') != EICAR_SHA256 or event.get('artifact_md5') != EICAR_MD5
+                or type(event.get('artifact_bytes')) is not int or event['artifact_bytes'] != 68
+                or event.get('payload_verified') is not True or event.get('test_artifact') is not True
+                or event.get('executed') is not False
+                or event.get('transfer_method') != 'ssh_stdin_fixed_eicar_receiver'):
+            raise ValueError('Exact EICAR receiver evidence required')
+        result.update({k:event[k] for k in ('artifact_path','artifact_sha256','artifact_md5',
+                                         'artifact_bytes','transfer_method')})
+        result.update(test_artifact=True, executed=False)
+    elif event['kind'] == 'process.execution':
         if event.get('argv') != SHELL_ARGV or not re.fullmatch(r'[a-f0-9]{64}', event.get('stdout_sha256', '')):
             raise ValueError('Unsupported shell action or missing output hash')
         result.update(command='/bin/sh -c "id; uname -s"', stdout_sha256=event['stdout_sha256'])

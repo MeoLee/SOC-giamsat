@@ -108,9 +108,12 @@ cài đã xong; không cài/restart giữa lúc đang đo một bài.
 SCP mã hóa nội dung nên không kỳ vọng Suricata đọc được chuỗi EICAR từ packet;
 FIM kiểm tra file sau khi đã lưu trên Ubuntu.
 
-Hash report đơn lẻ thiếu source process/phiên tấn công; bản này không tự thêm
+Hash report đơn lẻ thiếu source process/phiên tấn công; luồng SCP trong bài này không tự thêm
 node malware vào Attack Chain chỉ vì trùng thời gian/IP. Trước mắt kết quả
 file nằm ở Threat Hunting; cần telemetry actor/execution để ghép chain đúng.
+Từ 0.4.11, dùng [bài Scan → EICAR receiver → VT](EICAR-CHAIN-0411-VI.md)
+để liên kết file với đúng phiên SSH và hiển thị trong Attack Chain. SCP thông
+thường vẫn không tự có liên kết actor/file chỉ từ thời gian.
 
 ## 5. Trong Kali: tạo và chuyển file đối chứng
 

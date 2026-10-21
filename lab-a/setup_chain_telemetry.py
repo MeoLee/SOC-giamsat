@@ -80,6 +80,7 @@ def main():
     p.add_argument('--sensor', default='ubuntu-endpoint')
     p.add_argument('--client', default='kali-attacker')
     p.add_argument('--username', default='soctest')
+    p.add_argument('--check-eicar', action='store_true', help='Also check the existing FIM directory and Kali EICAR helper; no restart')
     p.add_argument('--config', type=Path, default=Path(__file__).with_name('live-config.json'))
     a = p.parse_args()
     for name in (a.sensor, a.client): container_name(name)
@@ -97,11 +98,18 @@ def main():
     command(['docker', 'exec', '--user', a.username, a.sensor, 'python3', '-c',
              'import os,shutil; assert os.getuid()!=0; assert shutil.which("curl"); print("ENDPOINT_READY")'])
     command(['docker', 'exec', a.client, 'python3', '-c', 'import http.server; print("CLIENT_READY")'])
+    if a.check_eicar:
+        command(['docker','exec','--user',a.username,a.sensor,'python3','-c',
+            "import os; from pathlib import Path; p=Path('/var/lib/soc-lab/fim'); "
+            "assert p.is_dir() and p.stat().st_uid==0 and not any(x.is_symlink() for x in (p,*p.parents)), 'FIM directory unsafe or absent'; "
+            "assert os.access(p,os.W_OK|os.X_OK), 'Lab account cannot receive into the FIM directory'; print('FIM_RECEIVER_DIRECTORY_READY')"])
+        command(['docker','exec',a.client,'python3','-c',
+            "from pathlib import Path; p=Path('/opt/soc-lab/vt_lab_artifact.py'); assert p.is_file(), 'Run Install-Kali-Tools.ps1 first'; compile(p.read_bytes(),str(p),'exec'); print('KALI_EICAR_HELPER_READY')"])
     stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     backup = a.config.with_name(a.config.name+'.before-chain-probe-'+stamp)
     backup.write_bytes(old)
     root = Path(__file__).parent
-    for container, names, user in [(a.sensor, ['endpoint_probe.py'], a.username),
+    for container, names, user in [(a.sensor, ['endpoint_probe.py','eicar_receiver.py','vt_lab_artifact.py'], a.username),
                                     (a.client, ['endpoint_probe.py', 'lab_transfer_server.py'], None)]:
         payload = {'username': user, 'files': {name: base64.b64encode((root/name).read_bytes()).decode() for name in names}}
         result = command(['docker', 'exec', '-i', '--user', '0', container, 'python3', '-c', INSTALL],
@@ -110,7 +118,8 @@ def main():
     from soc_ai.common import write_json
     write_json(a.config, data)
     print('CONFIG_BACKUP:', backup)
-    print('CHAIN_PROBE_INSTALLED: start a NEW Live capture; then run chain-extended.')
+    print('CHAIN_PROBE_INSTALLED: start a NEW Live capture; fixed SSH EICAR receiver is available.')
+    if a.check_eicar: print('EICAR_CHAIN_READY: no API-key change or Wazuh restart required.')
     print('Fixed benign lab actions only; no general audit coverage or confirmed compromise.')
 
 

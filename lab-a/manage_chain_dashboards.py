@@ -32,7 +32,7 @@ def main():
             headers={'Authorization':'Basic '+auth,'osd-xsrf':'true','Content-Type':'application/json'})
         with urllib.request.urlopen(req,context=context,timeout=30) as r:return r.read()
     current=json.loads(request('GET','/api/saved_objects/dashboard/'+DASHBOARD_ID))
-    if current.get('attributes',{}).get('title')!='SOC Lab A - Attack Chain':raise ValueError('Import the new dashboard before cleanup')
+    if current.get('attributes',{}).get('title') not in ('Attack Chain','SOC Lab A - Attack Chain'):raise ValueError('Import the new dashboard before cleanup')
     rows=[];page=1
     while True:
         result=json.loads(request('GET',f'/api/saved_objects/_find?type=dashboard&per_page=100&page={page}'))

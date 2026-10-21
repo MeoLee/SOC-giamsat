@@ -59,7 +59,9 @@ def add_graph(view):
             'text':{'field':'nodeTitle'},'lineBreak':{'value':'\n'},'lineHeight':{'value':13},'limit':{'signal':'graphBox-12'},
             'tooltip':{'signal':"datum.label+' ['+datum.technique+'] | '+datum.d.start_time+' → '+datum.d.end_time"}}}},
         {'type':'text','from':{'data':'graphNodes'},'encode':{'update':{
-            'x':{'signal':'datum.gx+7'},'y':{'signal':'datum.gy+70-graphScroll'},'fontSize':{'value':9},'fill':{'value':'#35566b'},'text':{'value':'ĐÃ QUAN SÁT'}}}},
+            'x':{'signal':'datum.gx+7'},'y':{'signal':'datum.gy+70-graphScroll'},'fontSize':{'value':9},'fill':{'value':'#35566b'},
+            'text':{'signal':"datum.d.stage_name=='observed_eicar_transfer' ? (datum.d.vt_status=='detected_test_file' ? 'EICAR · VT: '+datum.d.vt_positives+' detections' : 'EICAR · VT: '+(datum.d.vt_status || 'đang chờ')) : 'ĐÃ QUAN SÁT'"},
+            'limit':{'signal':'graphBox-12'},'tooltip':{'signal':"datum.d.stage_details"}}}},
         {'type':'rule','from':{'data':'graphFuture'},'encode':{'update':{
             'x':{'signal':'datum.gx+graphBox'},'x2':{'field':'futureX'},'y':{'signal':'datum.gy+38-graphScroll'},'stroke':{'value':'#b98100'},'strokeDash':{'value':[5,4]},'strokeWidth':{'value':2}}}},
         {'type':'symbol','from':{'data':'graphFuture'},'encode':{'update':{'x':{'field':'futureX'},'y':{'signal':'datum.gy+38-graphScroll'},'shape':{'value':'triangle-right'},'size':{'value':70},'fill':{'value':'#b98100'}}}},

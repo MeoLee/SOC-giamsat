@@ -11,7 +11,8 @@ import subprocess
 import zipfile
 
 
-REQUIRED = {'test_restart_control.py', 'docs/VT-RESTART-FIX-04102-VI.md',
+REQUIRED = {'eicar_receiver.py','lab_file_chain.py','test_file_chain.py','docs/EICAR-CHAIN-0411-VI.md','docs/validation-0411.json',
+            'test_restart_control.py', 'docs/VT-RESTART-FIX-04102-VI.md',
             'docs/validation-04102.json', 'docs/WAZUH-LOGTEST-PARSER-FIX-04101-VI.md', 'docs/validation-04101.json', 'setup_virustotal.py', 'vt_lab_artifact.py', 'test_severity_virustotal.py',
             'docs/SEVERITY-POLICY-0410-VI.md', 'docs/VIRUSTOTAL-01-VI.md', 'docs/validation-0410.json', 'test_chain_retention.py', 'docs/CHAIN-RETENTION-0492-VI.md',
             'docs/validation-0492.json', 'wazuh_install_checks.py', 'test_wazuh_install_checks.py',

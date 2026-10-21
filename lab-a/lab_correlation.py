@@ -155,6 +155,10 @@ def normalize_line(source, raw, config):
             return None
     elif not agent.get('id') or not agent.get('name'):
         return None
+    from lab_file_chain import native_event
+    file_event = native_event(wrapper, config)
+    if file_event:
+        return file_event
     full = wrapper.get('full_log', '')
     if not isinstance(full, str):
         raise ValueError('Invalid Wazuh full_log')
@@ -270,6 +274,9 @@ def build_cases(events, config):
             add_scan_case(cases, key, cluster)
     from lab_endpoint import extend_cases
     extend_cases(cases, events, config)
+    from lab_file_chain import transfer_cases
+    for case in transfer_cases(events):
+        cases[case['case_id']] = case
     from lab_risk import case_assessment
     for case in cases.values():
         case.update(case_assessment(case))

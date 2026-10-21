@@ -1,0 +1,56 @@
+{
+  "release": "0.4.11",
+  "date": "2026-10-21",
+  "native_ui_fixture_checks": {
+    "isolated_fixture_validation": true,
+    "windows_live_validation": false,
+    "import_count": 5,
+    "repeat_import_count": 5,
+    "pending_vt": {
+      "risk_score": 50,
+      "observed_nodes": 2,
+      "edges": 1,
+      "future_hypotheses": 1
+    },
+    "enriched_vt": {
+      "risk_score": 85,
+      "observed_nodes": 2,
+      "parent_arrows": 1,
+      "future_hypotheses": 1,
+      "stable_chain_id": "CHAIN-D792A1A83849908B",
+      "activity_end_unchanged": true,
+      "vt_badge_rendered": true,
+      "mixed_revisions_blocked": true
+    },
+    "native_chain_id_click_scopes_chain_and_session": true,
+    "page_errors": [],
+    "failed_shards": [],
+    "dashboard_title": "Attack Chain"
+  },
+  "container_receiver": {
+    "isolated_container": true,
+    "real_ssh_connection_tested": false,
+    "environment_connection_fixture": true,
+    "root_owned_install_twice": true,
+    "unprivileged_uid": 1003,
+    "receiver_real_bytes_and_filesystem_verified": true,
+    "windows_lab_verified": false
+  },
+  "actual_ssh_receiver": {
+    "actual_tcp_ssh_verified": true,
+    "auth_log_matches_receiver_source_ip_port_account": true,
+    "isolated_container": true,
+    "windows_lab_verified": false
+  },
+  "live_wazuh_virustotal_api_tested_here": false,
+  "windows_lab_end_to_end_verified": false,
+  "model_changed": false,
+  "live_ssh_auth_fim_vt_join_requires_user_lab_recheck": true,
+  "regression_suite": {
+    "tests_run": 463,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 2,
+    "skip_reason": "Windows-only filesystem integration on Linux"
+  }
+}

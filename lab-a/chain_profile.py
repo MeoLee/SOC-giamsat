@@ -12,6 +12,9 @@ READER_ID = 'soc-ai-chain-profile-reader-v1'
 # Display names, evidence requirements and follow-up hypotheses are curated.
 # ATT&CK does not prescribe a mandatory technique order or predict the future.
 STEPS = [
+    {'key':'observed_eicar_transfer','label':'Chuyển file EICAR qua SSH','technique':'T1105',
+     'meaning':'Receiver ghi đúng phiên SSH và xác minh 68 bytes/hash của file thử antivirus EICAR. FIM và VirusTotal bổ sung bằng chứng vào bước này; không phải hành động mới. Không xác nhận mã độc thực, thực thi hay chiếm quyền.',
+     'requirement':'Đối chiếu IP, account, source_port, token, artifact_path và hash. fim_alert_id phải trùng virustotal.source.alert_id trên cùng agent. vt_status cho biết VT đã về hay chưa.'},
     {'key':'observed_auth_failures','label':'Các lần sai mật khẩu — ngữ cảnh','technique':'unmapped',
      'meaning':'Có failures sau scan, nhưng chưa đạt điều kiện burst theo account/cửa sổ. Không gán brute force hoặc tăng điểm chỉ từ những failure rời.',
      'requirement':'Đối chiếu auth.log, số failures, thời gian và lỗi SSH reset/lockout trong operator.json.'},
@@ -41,6 +44,8 @@ STEPS = [
      'requirement': 'Đọc request, rule, log ứng dụng và database; kiểm tra thay đổi dữ liệu hoặc lỗi truy vấn có liên quan.'},
 ]
 FOLLOW_UP = [
+    {'after':'observed_eicar_transfer','label':'Giả thuyết: thử thực thi file hoặc tiếp tục thao tác trên host',
+     'detail':'Đây là hướng điều tra, chưa quan sát. Cần process/audit telemetry và liên kết đúng file/hash/phiên. Bài tập chỉ chuyển EICAR, không thực thi; kết quả VT không chứng minh infection, persistence, C2 hoặc leo thang.'},
     {'after':'observed_auth_failures','label':'Giả thuyết: thử tiếp, ngừng thử hoặc kết nối bị chặn',
      'detail':'Đối chiếu auth server và SSH policy; chỉ nâng thành password guessing khi đủ ngưỡng trong cửa sổ. Reset không phải auth failure.'},
     {'after':'http_request_pressure','label':'Giả thuyết: ảnh hưởng khả dụng nếu tải tiếp tục tăng',

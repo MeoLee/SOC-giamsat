@@ -26,7 +26,7 @@ def episodes(events,config):
                 roots.append(instant(s['recon_window_start']));root_start=t
             last_scan=t
         anchors=sorted((e for e in rows if e['event_id'] in proof_ids or e['event_id'] in http_ids
-            or e['kind'].startswith('auth.') or e['kind'] in ('process.execution','file.transfer','web.sqli_indicator')),
+            or e['kind'].startswith('auth.') or e['kind'] in ('process.execution','file.transfer','file.eicar_received','web.sqli_indicator')),
             key=lambda e:(instant(e['event_time']),e['event_id']))
         if not anchors:continue
         boundaries=[];previous=None;start=None
