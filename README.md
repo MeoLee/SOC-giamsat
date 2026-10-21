@@ -1,5 +1,7 @@
 # SOC-giamsat
 
+- **[0.4.11.1 — Đổi nhãn thành “Chuyển file độc qua SSH”](https://raw.githubusercontent.com/MeoLee/SOC-giamsat/main/downloads/soc-ai-attack-chain-file-label-v0.4.11.1.ndjson)**. Import trực tiếp trong Saved objects, bật overwrite conflicts; 5 objects, cùng dashboard Attack Chain. Chú thích EICAR vẫn được giữ trong bằng chứng.
+
 - **[0.4.11 — Scan → chuyển EICAR → bằng chứng VT, dashboard Attack Chain](https://raw.githubusercontent.com/MeoLee/SOC-giamsat/main/downloads/SOC-AI-Lab-A-v0.4.11-EICAR-Chain-20261021.zip)** (bản vá phẳng từ 0.4.10.2 đã cài VT).
 - [Cập nhật và một kịch bản Kali Bash](lab-a/docs/EICAR-CHAIN-0411-VI.md) · [Full source 0.4.11](https://raw.githubusercontent.com/MeoLee/SOC-giamsat/main/downloads/SOC-AI-Lab-A-v0.4.11-Research-20261021.zip).
 

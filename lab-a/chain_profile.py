@@ -12,7 +12,7 @@ READER_ID = 'soc-ai-chain-profile-reader-v1'
 # Display names, evidence requirements and follow-up hypotheses are curated.
 # ATT&CK does not prescribe a mandatory technique order or predict the future.
 STEPS = [
-    {'key':'observed_eicar_transfer','label':'Chuyển file EICAR qua SSH','technique':'T1105',
+    {'key':'observed_eicar_transfer','label':'Chuyển file độc qua SSH','technique':'T1105',
      'meaning':'Receiver ghi đúng phiên SSH và xác minh 68 bytes/hash của file thử antivirus EICAR. FIM và VirusTotal bổ sung bằng chứng vào bước này; không phải hành động mới. Không xác nhận mã độc thực, thực thi hay chiếm quyền.',
      'requirement':'Đối chiếu IP, account, source_port, token, artifact_path và hash. fim_alert_id phải trùng virustotal.source.alert_id trên cùng agent. vt_status cho biết VT đã về hay chưa.'},
     {'key':'observed_auth_failures','label':'Các lần sai mật khẩu — ngữ cảnh','technique':'unmapped',
