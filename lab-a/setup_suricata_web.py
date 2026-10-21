@@ -2,7 +2,7 @@
 
 Validate configuration and positive/negative PCAP first; preserve existing
 rules and use SIGUSR2 hot reload. Does not change YAML or restart the sensor.
-This adds two local signatures, not the full ET Open ruleset.
+This adds local SQLi and bounded DVWA HTTP-rate indicators, not ET Open.
 """
 import argparse
 import ipaddress
@@ -15,6 +15,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import time
 
 BEGIN = '# BEGIN SOC-WEB MANAGED RULES'
 END = '# END SOC-WEB MANAGED RULES'
@@ -24,7 +25,7 @@ def merge_rules(old, web):
     if old.count(BEGIN)!=old.count(END) or old.count(BEGIN)>1:
         raise ValueError('Ambiguous SOC-WEB rule block')
     old = re.sub(re.escape(BEGIN)+'.*?'+re.escape(END), '',old,flags=re.S)
-    for sid in ('9900101','9900102'):
+    for sid in ('9900101','9900102','9900104'):
         if re.search(r'\bsid\s*:\s*'+sid+r'\s*;',old):
             raise ValueError('Signature ID collision: '+sid)
     return old.rstrip()+'\n\n'+BEGIN+'\n'+web.strip()+'\n'+END+'\n'
@@ -76,6 +77,28 @@ def test_pcap():
     return bytes(result)
 
 
+def flood_pcap():
+    # Separate fixture: keep test_pcap() stable for the recon exact-count test.
+    result=bytearray(test_pcap());count=1000
+    for src,number,path in [('198.51.100.11',61,'/dvwa/login.php'),
+                            ('198.51.100.12',33,'/dvwa/login.php'),
+                            ('198.51.100.13',61,'/soc-lab-health')]:
+        for i in range(number):
+            dst='192.0.2.10';port=31000+i
+            req=('GET '+path+' HTTP/1.1\r\nHost: lab\r\nConnection: close\r\n\r\n').encode()
+            resp=b'HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nOK'
+            frames=[packet(src,dst,port,80,1000,0,2),packet(dst,src,80,port,2000,1001,18),
+                packet(src,dst,port,80,1001,2001,16),packet(src,dst,port,80,1001,2001,24,req),
+                packet(dst,src,80,port,2001,1001+len(req),16),packet(dst,src,80,port,2001,1001+len(req),24,resp),
+                packet(src,dst,port,80,1001+len(req),2001+len(resp),16),
+                packet(src,dst,port,80,1001+len(req),2001+len(resp),17),
+                packet(dst,src,80,port,2001+len(resp),1002+len(req),17),
+                packet(src,dst,port,80,1002+len(req),2002+len(resp),16)]
+            for frame in frames:
+                result+=struct.pack('<IIII',1792020001+count//1000,(count%1000)*1000,len(frame),len(frame))+frame;count+=1
+    return bytes(result)
+
+
 def remote_install(payload):
     if os.geteuid()!=0: raise RuntimeError('Run as root in the sensor container')
     processes=[]
@@ -89,13 +112,13 @@ def remote_install(payload):
     if '-S' not in args or '-c' not in args:
         raise RuntimeError('Unexpected startup command; inspect before changing rule loading')
     rules=Path(args[args.index('-S')+1]); yaml=args[args.index('-c')+1]
-    if not rules.is_file(): raise RuntimeError('Loaded rule file missing')
+    if not rules.is_file() or rules.is_symlink(): raise RuntimeError('Loaded rule file must be a regular non-symlink file')
     old=rules.read_bytes()
     merged=merge_rules(old.decode('utf-8'),payload['rules'])
     with tempfile.TemporaryDirectory(prefix='soc-web-check-') as directory:
         root=Path(directory); candidate=root/'candidate.rules'; candidate.write_text(merged)
         subprocess.run(['suricata','-T','--init-errors-fatal','-c',yaml,'-S',str(candidate),'-l',str(root)],check=True)
-        pcap=root/'web-check.pcap'; pcap.write_bytes(test_pcap())
+        pcap=root/'web-check.pcap'; pcap.write_bytes(flood_pcap())
         subprocess.run(['suricata','--runmode','single','--init-errors-fatal','-c',yaml,'-S',str(candidate),
             '-r',str(pcap),'-k','none','-l',str(root),'--set','unix-command.enabled=no'],check=True,timeout=90)
         alerts=[]
@@ -108,16 +131,30 @@ def remote_install(payload):
             raise RuntimeError('SQLi positive PCAP test failed; live rule file was not changed')
         if any(str(e['alert']['signature_id']) in ('9900101','9900102') and e.get('src_port')==30003 for e in alerts):
             raise RuntimeError('Benign PCAP triggered SQLi rule; live rule file was not changed')
+        flood=[e for e in alerts if str(e['alert']['signature_id'])=='9900104']
+        if len(flood)!=1 or flood[0].get('src_ip')!='198.51.100.11':
+            raise RuntimeError('DVWA rate positive/low-volume/other-route PCAP controls failed; live rule file was not changed')
     if rules.read_bytes()!=old: raise RuntimeError('Rule file changed during validation; retry after inspecting')
+    metadata=rules.stat()
+    backup=rules.with_name(rules.name+'.before-web-'+str(time.time_ns()))
+    fd=os.open(backup,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+    with os.fdopen(fd,'wb') as stream:stream.write(old);stream.flush();os.fsync(stream.fileno())
+    def atomic(data):
+        fd,name=tempfile.mkstemp(dir=rules.parent,prefix='.soc-web-')
+        try:
+            with os.fdopen(fd,'wb') as stream:stream.write(data);stream.flush();os.fsync(stream.fileno())
+            os.chmod(name,metadata.st_mode&0o777);os.chown(name,metadata.st_uid,metadata.st_gid);os.replace(name,rules)
+        finally:
+            if os.path.exists(name):os.unlink(name)
     try:
-        stat=rules.stat()
-        rules.write_text(merged,encoding='utf-8'); os.chmod(rules,stat.st_mode&0o777); os.chown(rules,stat.st_uid,stat.st_gid)
+        atomic(merged.encode('utf-8'))
         os.kill(pid,signal.SIGUSR2)
     except BaseException:
-        rules.write_bytes(old)
+        atomic(old)
         raise
+    print('RULE_BACKUP:',backup,flush=True)
     print('SURICATA_WEB_RULES_VALIDATED_AND_RELOAD_REQUESTED',flush=True)
-    print('Preserved original rules and startup command. SQLi traffic must still verify live alerts.',flush=True)
+    print('Preserved original rules/startup command. Verify SQLi and DVWA HTTP-rate alerts with live traffic.',flush=True)
 
 
 def remote_script():

@@ -199,6 +199,7 @@ def objects():
         '[Quay lại tất cả chain và bật refresh](#/view/'+DASHBOARD_ID+'?_a='+quote("(filters:!(),query:(language:kuery,query:''))",safe='')+'&_g='+quote('(refreshInterval:(pause:!f,value:2000))',safe='')+')'+
         '\n\n**Điểm:** max điểm hành vi +10 nếu có recon trước +5 nếu có ≥2 nhóm hành vi độc lập; cap 95. Đây là ưu tiên điều tra, không phải xác suất. '
         'EICAR là file thử antivirus: transfer có kiểm chứng = 40; khi VT dương tính liên kết đúng file = base tối thiểu 75 (85 nếu có scan trước). VT là bằng chứng bổ sung, không là bước tấn công mới; không xác nhận infection. '
+        '**HTTP:** web flood/áp lực request =45; nghi vấn DoS có baseline khỏe cùng route và suy giảm =75. Đọc request/window, p95,5xx và http_route trong từng bước; High không đồng nghĩa DoS thành công. '
         'HTTP rate cao là pressure; nghi vấn DoS cần baseline tốt rồi mới có suy giảm 5xx/latency. Không ép mọi cuộc tấn công phải có scan đã quan sát. '
         'Bật monitor rồi thao tác trong Kali Bash. Một bước là ứng viên tạm thời; hết ngưỡng idle (mặc định 90 giây, chờ 95 giây để kiểm thử) thì tự ẩn, không xóa log/alert. Chỉ giữ lâu dài chain có ít nhất hai bước đã quan sát. Chain nhiều bước tạm lắng vẫn được giữ và hiện gợi ý nét đứt; đây là runbook, chưa có xác suất dự đoán được kiểm định. Mỗi nhánh có parent stage IDs và bằng chứng; cùng nguồn/đích/thời gian chưa chứng minh cùng ý đồ hay quan hệ nhân quả. '
         'Event thường tiếp tục xem ở Threat Hunting.'})

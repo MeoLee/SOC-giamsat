@@ -197,6 +197,7 @@ class Activities:
         for (kind, host, src, user), count in groups.items():
             print('[AUTH]', safe(src), '->', safe(host), 'user='+safe(user), safe(kind), 'count='+str(count), flush=True)
         self.publish_chains(engine)
+        self.publish_http_load(engine)
         for case in engine.cases:
             # Publish on stage/status transitions, not once per failed password.
             stages = [s['name'] for s in case['stages']]
@@ -245,6 +246,35 @@ class Activities:
                 if len(encoded(row).encode('utf-8')) > 6000:
                     raise RuntimeError('Correlation event exceeds 6000 bytes; local case/evidence preserved. Shorten metadata before Wazuh delivery.')
                 self.publisher.enqueue(row)
+
+    def publish_http_load(self,engine):
+        config=getattr(engine,'config',{})
+        if not config.get('attack_chain_enabled') or not config.get('http_load_alerts_enabled'):return
+        from lab_campaign import http_cases
+        from lab_correlation import digest
+        if not hasattr(self,'http_load_revisions'):self.http_load_revisions={}
+        for case in http_cases(list(engine.events.values()),config):
+            s=case['stages'][0];revision=digest(s)
+            if self.http_load_revisions.get(case['case_id'])==revision:continue
+            degraded=s['service_degradation_observed']
+            fields={k:s[k] for k in ('request_count','threshold','window_seconds','window_rate_rps','http_route',
+                'http_method','application','target_port','server_5xx_count','server_5xx_ratio','slow_request_count',
+                'slow_request_ratio','slow_us','baseline_request_count','baseline_p95_us','burst_p50_us','burst_p95_us',
+                'baseline_comparison_scope','healthy_baseline_observed','service_degradation_observed','detection_method')}
+            row=make_event('http_load',[self.folder.name,case['case_id'],revision],
+                **assessment(75 if degraded else 45,'Apache request-rate evidence with same-route baseline comparison',
+                             'possible_service_degradation' if degraded else 'request_pressure_observed'),
+                **fields,source_ip=case['source_ip'],target_ip=case['target_ip'],target_host=case['target_host'],
+                session_id=self.folder.name,event_time=s['end_time'],http_rate_exceeded=True,
+                http_rate_evidence_verified=True,evidence_ids=s['evidence_ids'][:4],evidence_count=len(s['evidence_ids']),
+                baseline_evidence_ids=s['baseline_evidence_ids'][:4],evidence_file=str(engine.snapshot),
+                dos_causality_proven=False,training_label=None)
+            self.emit(row);self.http_load_revisions[case['case_id']]=revision
+            print('[HTTP-LOAD]',safe(case['source_ip']),'->',safe(case['target_ip']),safe(s['http_route']),
+                'requests='+str(s['request_count']),'window='+str(s['window_seconds'])+'s',
+                'p95_us='+str(s['burst_p95_us']),'5xx='+str(s['server_5xx_count']),
+                'baseline='+str(s['healthy_baseline_observed']),
+                'nghi_van_DoS_co_suy_giam' if degraded else 'ap_luc_HTTP_chua_chung_minh_DoS',flush=True)
 
     def publish_chains(self, engine):
         from lab_campaign import wire_events,validate

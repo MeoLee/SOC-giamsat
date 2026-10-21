@@ -60,7 +60,7 @@ def add_graph(view):
             'tooltip':{'signal':"datum.label+' ['+datum.technique+'] | '+datum.d.start_time+' → '+datum.d.end_time"}}}},
         {'type':'text','from':{'data':'graphNodes'},'encode':{'update':{
             'x':{'signal':'datum.gx+7'},'y':{'signal':'datum.gy+70-graphScroll'},'fontSize':{'value':9},'fill':{'value':'#35566b'},
-            'text':{'signal':"datum.d.stage_name=='observed_eicar_transfer' ? (datum.d.vt_status=='detected_test_file' ? 'EICAR · VT: '+datum.d.vt_positives+' detections' : 'EICAR · VT: '+(datum.d.vt_status || 'đang chờ')) : 'ĐÃ QUAN SÁT'"},
+            'text':{'signal':"datum.d.stage_name=='http_request_pressure' || datum.d.stage_name=='possible_http_dos' ? datum.d.request_count+' req/'+datum.d.window_seconds+'s · p95='+round(toNumber(datum.d.burst_p95_us)/1000)+'ms · 5xx='+datum.d.server_5xx_count : datum.d.stage_name=='observed_eicar_transfer' ? (datum.d.vt_status=='detected_test_file' ? 'EICAR · VT: '+datum.d.vt_positives+' detections' : 'EICAR · VT: '+(datum.d.vt_status || 'đang chờ')) : 'ĐÃ QUAN SÁT'"},
             'limit':{'signal':'graphBox-12'},'tooltip':{'signal':"datum.d.stage_details"}}}},
         {'type':'rule','from':{'data':'graphFuture'},'encode':{'update':{
             'x':{'signal':'datum.gx+graphBox'},'x2':{'field':'futureX'},'y':{'signal':'datum.gy+38-graphScroll'},'stroke':{'value':'#b98100'},'strokeDash':{'value':[5,4]},'strokeWidth':{'value':2}}}},

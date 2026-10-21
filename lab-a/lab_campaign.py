@@ -8,8 +8,10 @@ from copy import deepcopy
 from datetime import timedelta
 
 DEFAULTS = {'attack_chain_enabled': False, 'chain_max_seconds': 900,
+            'http_load_alerts_enabled':False,
             'http_pressure_threshold': 60, 'http_pressure_window_seconds': 10,
             'http_slow_us': 1000000, 'http_baseline_minimum': 10,
+            'http_baseline_maximum':20,'http_latency_multiplier':5,'http_pressure_gap_us':500000,
             'chain_idle_seconds':90,'chain_rescan_gap_seconds':30}
 CATEGORIES = {'observed_auth_failures':'authentication_observation','possible_recon': 'reconnaissance',
     'observed_eicar_transfer':'test_file_transfer',
@@ -25,62 +27,23 @@ BASE = {'observed_auth_failures':15,'possible_recon': 40, 'repeated_auth_failure
 
 def validate(config):
     result = {**DEFAULTS, **config}
-    if type(result['attack_chain_enabled']) is not bool:
-        raise ValueError('attack_chain_enabled must be boolean')
+    for name in ('attack_chain_enabled','http_load_alerts_enabled'):
+        if type(result[name]) is not bool:
+            raise ValueError(name+' must be boolean')
     for key, low, high in [('chain_max_seconds',60,3600),('http_pressure_threshold',10,10000),
                            ('http_pressure_window_seconds',1,60),('http_slow_us',1000,60000000),
-                           ('http_baseline_minimum',5,1000),('chain_idle_seconds',30,1800),('chain_rescan_gap_seconds',10,600)]:
+                           ('http_baseline_minimum',5,1000),('http_baseline_maximum',10,1000),
+                           ('http_latency_multiplier',2,100),('http_pressure_gap_us',10000,5000000),('chain_idle_seconds',30,1800),('chain_rescan_gap_seconds',10,600)]:
         if type(result[key]) is not int or not low <= result[key] <= high:
             raise ValueError('Invalid campaign setting: '+key)
+    if result['http_baseline_maximum']<result['http_baseline_minimum']:
+        raise ValueError('HTTP maximum baseline must cover its minimum')
     return result
 
 
 def http_cases(events, config):
-    from lab_correlation import instant, digest
-    c = validate(config); groups=defaultdict(dict); services=defaultdict(dict)
-    for e in events:
-        if e['kind'] not in ('web.request','web.sqli_indicator') or e.get('evidence_provider')!='apache_tsv':
-            continue
-        # Only server TSV requests; EVE and Wazuh copies cannot inflate counts.
-        key=(e['target_host'],e['target_ip'],e.get('destination_port'),e.get('http_origin'))
-        identity=e.get('http_record_id')
-        if not identity or not e.get('http_origin'): continue
-        if not e.get('_chain_baseline_only'):groups[(*key,e['source_ip'])][identity]=e
-        services[key][identity]=e
-    result=[]
-    for key, unique in sorted(groups.items()):
-        timeline=sorted(unique.values(), key=lambda e:(e['event_time'],e['event_id']))
-        i=0
-        while i<len(timeline):
-            first=timeline[i]; start=instant(first['event_time']); end=start+timedelta(seconds=c['http_pressure_window_seconds'])
-            j=i
-            while j<len(timeline) and instant(timeline[j]['event_time'])<end: j+=1
-            burst=timeline[i:j]
-            if len(burst)<c['http_pressure_threshold']:
-                i+=1; continue
-            baseline=[e for e in services[key[:-1]].values()
-                      if start-timedelta(seconds=120)<=instant(e['event_time'])<start
-                      and instant(e.get('available_time') or e['event_time'])<=start]
-            slow=lambda e: e.get('duration_us',0)>=c['http_slow_us']
-            bad=lambda e: (e.get('http_status') or 0)>=500
-            healthy=bool(len(baseline)>=c['http_baseline_minimum'] and
-                         sum(slow(e) or not 200<=e.get('http_status',0)<300 for e in baseline)/len(baseline)<.1)
-            errors=sum(bad(e) for e in burst); slows=sum(slow(e) for e in burst)
-            degraded=healthy and (errors>=max(5,len(burst)*.2) or slows>=max(5,len(burst)*.2))
-            stage={'name':'possible_http_dos' if degraded else 'http_request_pressure',
-                   'start_time':first['event_time'],'end_time':max(e.get('available_time') or e['event_time'] for e in burst),
-                   'evidence_ids':[e['event_id'] for e in burst], 'request_count':len(burst),
-                   'threshold':c['http_pressure_threshold'], 'window_seconds':c['http_pressure_window_seconds'],
-                   'server_5xx_count':errors, 'slow_request_count':slows, 'slow_us':c['http_slow_us'],
-                   'baseline_request_count':len(baseline),
-                   'baseline_evidence_ids':sorted(e['event_id'] for e in baseline),
-                   'healthy_baseline_observed':healthy,
-                   'service_degradation_observed':degraded, 'dos_causality_proven':False}
-            result.append({'case_id':'http:'+digest([key,first['http_record_id']]),
-                           'target_host':first['target_host'],'target_ip':first['target_ip'],
-                           'source_ip':first['source_ip'],'username':None,'stages':[stage]})
-            i=j  # Non-overlapping, bounded episodes. No endless sliding chain.
-    return result
+    from http_load_detection import http_cases as detect
+    return detect(events, config)
 
 
 def build_chains(events, branches, config):
@@ -216,6 +179,8 @@ def stage_detail(stage):
     for key in ('distinct_destination_ports','port_threshold','port_window_seconds','failure_count',
                 'threshold','window_seconds','command','request_count','server_5xx_count','slow_request_count',
                 'baseline_request_count','healthy_baseline_observed','service_degradation_observed',
+                'window_rate_rps','http_route','http_method','application','target_port','server_5xx_ratio','slow_request_ratio',
+                'baseline_p95_us','burst_p50_us','burst_p95_us','slow_us','latency_multiplier','baseline_comparison_scope',
                 'artifact_bytes','transfer_url','artifact_path','artifact_sha256','artifact_md5',
                 'transfer_method','source_port','test_artifact','executed','vt_status',
                 'fim_alert_id','vt_alert_id','vt_rule_id','vt_positives','vt_report_time'):
@@ -247,6 +212,12 @@ def wire_events(chain, session_id, evidence_file, runtime=None):
             fields.update({k:s[k] for k in ('artifact_path','artifact_sha256','artifact_md5','artifact_bytes',
                 'test_artifact','executed','vt_status','fim_alert_id','vt_alert_id','vt_rule_id',
                 'vt_positives','vt_report_time','transfer_method','source_port') if k in s})
+        if s['name'] in ('http_request_pressure','possible_http_dos'):
+            fields.update({k:s[k] for k in ('request_count','threshold','window_seconds','window_rate_rps',
+                'http_route','http_method','application','target_port','server_5xx_count','server_5xx_ratio',
+                'slow_request_count','slow_request_ratio','slow_us','baseline_request_count','baseline_p95_us',
+                'burst_p50_us','burst_p95_us','healthy_baseline_observed','service_degradation_observed',
+                'baseline_comparison_scope','detection_method') if k in s})
         docs.append(make_event('chain_stage',[session_id,s['stage_id'],revision],**fields))
     names=list(dict.fromkeys(s['name'] for s in stages))
     fields={**common,**{k:c[k] for k in ('risk_policy','risk_score','risk_level','risk_score_base',

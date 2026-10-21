@@ -1,0 +1,157 @@
+{
+  "release": "0.4.12",
+  "date": "2026-10-21",
+  "native_fixture_checks": {
+    "suricata": {
+      "native_suricata": "8.0.3",
+      "matched": [
+        [
+          9900101,
+          "198.51.100.10"
+        ],
+        [
+          9900102,
+          "198.51.100.10"
+        ],
+        [
+          9900104,
+          "198.51.100.11"
+        ]
+      ],
+      "positive_61_dvwa_get": true,
+      "negative_33_dvwa_get": true,
+      "negative_61_other_route": true,
+      "sqli_regression_preserved": true
+    },
+    "wazuh": {
+      "native_wazuh": "4.14.7",
+      "matched": [
+        [
+          "119201",
+          "3"
+        ],
+        [
+          "119202",
+          "5"
+        ],
+        [
+          "119203",
+          "8"
+        ],
+        [
+          "119204",
+          "10"
+        ],
+        [
+          "119205",
+          "13"
+        ],
+        [
+          "119206",
+          "12"
+        ],
+        [
+          "119207",
+          "3"
+        ],
+        [
+          "119208",
+          "3"
+        ],
+        [
+          "119209",
+          "8"
+        ],
+        [
+          "119210",
+          "3"
+        ],
+        [
+          "119211",
+          "7"
+        ],
+        [
+          "119212",
+          "5"
+        ],
+        [
+          "119213",
+          "3"
+        ],
+        [
+          "119214",
+          "12"
+        ],
+        [
+          "119215",
+          "12"
+        ],
+        [
+          "119217",
+          "8"
+        ],
+        [
+          "119218",
+          "12"
+        ],
+        [
+          "119217",
+          "8"
+        ],
+        [
+          "119218",
+          "12"
+        ],
+        [
+          "119217",
+          "8"
+        ],
+        [
+          "119217",
+          "8"
+        ],
+        [
+          "119217",
+          "8"
+        ]
+      ],
+      "rate_only_level8": true,
+      "same_route_degradation_level12": true,
+      "bad_baseline_or_scope_never_high": true,
+      "sqli_vt_bridge_regressions_preserved": true
+    },
+    "dashboard": {
+      "isolated_fixture_validation": true,
+      "real_windows_dvwa_verified": false,
+      "import_count": 5,
+      "repeat_import_count": 5,
+      "pressure": {
+        "risk_score": 55,
+        "nodes": 2,
+        "arrows": 1,
+        "hypotheses": 1
+      },
+      "degradation": {
+        "risk_score": 85,
+        "nodes": 2,
+        "same_chain_id": true,
+        "native_badge_and_vietnamese_details": true
+      },
+      "page_errors": [],
+      "failed_shards": [],
+      "dashboard_title": "Attack Chain"
+    }
+  },
+  "real_user_dvwa_end_to_end_verified": false,
+  "training_or_weights_changed": false,
+  "client_test": "Real loopback HTTP GET, redirect and bounded timeout, with a fixed-route fixture; not a DVWA capacity benchmark",
+  "regression_suite": {
+    "tests_run": 476,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 2,
+    "skip_reason": "Windows-only filesystem integration on Linux"
+  },
+  "model_predictions_not_labels": true,
+  "dos_causality_or_success_proven": false
+}

@@ -387,7 +387,7 @@ class Correlator:
                 if e: e.pop('source_ref',None)
                 elif self.config.get('attack_chain_enabled'):
                     e = {k:web[k] for k in ('event_time','available_time','source_ip','source_port','target_ip',
-                        'target_host','destination_port','http_status','duration_us','evidence_provider','http_origin')}
+                        'target_host','destination_port','http_status','duration_us','evidence_provider','http_origin','http_method','url_path')}
                     e.update(kind='web.request', http_record_id=web['record_id'])
             else:
                 e = normalize_line(source, raw, self.config)

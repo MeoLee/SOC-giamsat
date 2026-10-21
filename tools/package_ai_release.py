@@ -11,7 +11,8 @@ import subprocess
 import zipfile
 
 
-REQUIRED = {'eicar_receiver.py','lab_file_chain.py','test_file_chain.py','docs/EICAR-CHAIN-0411-VI.md','docs/validation-0411.json',
+REQUIRED = {'dvwa_web_flood.py','http_load_detection.py','test_web_flood.py','docs/WEB-FLOOD-DVWA-0412-VI.md','docs/validation-0412.json',
+            'eicar_receiver.py','lab_file_chain.py','test_file_chain.py','docs/EICAR-CHAIN-0411-VI.md','docs/validation-0411.json',
             'test_restart_control.py', 'docs/VT-RESTART-FIX-04102-VI.md',
             'docs/validation-04102.json', 'docs/WAZUH-LOGTEST-PARSER-FIX-04101-VI.md', 'docs/validation-04101.json', 'setup_virustotal.py', 'vt_lab_artifact.py', 'test_severity_virustotal.py',
             'docs/SEVERITY-POLICY-0410-VI.md', 'docs/VIRUSTOTAL-01-VI.md', 'docs/validation-0410.json', 'test_chain_retention.py', 'docs/CHAIN-RETENTION-0492-VI.md',
